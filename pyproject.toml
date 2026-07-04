@@ -41,6 +41,10 @@ extend-exclude = ["notebooks"]
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
 
+[tool.ruff.lint.per-file-ignores]
+# FastAPI uses Depends()/Query() in argument defaults by design.
+"app/backend/main.py" = ["B008"]
+
 [tool.mypy]
 python_version = "3.12"
 strict = true

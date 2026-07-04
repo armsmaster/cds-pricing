@@ -5,13 +5,36 @@ from datetime import date, timedelta
 from typing import Any
 
 from app.backend.schemas import QuoteIn
-from cdslib import OISGenerator, OISQuote, bootstrap
+from cdslib import BootstrapResult, OISGenerator, OISQuote, bootstrap
 
 _generator = OISGenerator.load_default()
 
 
 def _to_quotes(items: list[QuoteIn]) -> list[OISQuote]:
     return [OISQuote(i.rate, i.tenor, i.bid, i.ask) for i in items]
+
+
+def compute(
+    items: list[QuoteIn], trade_date: date | None, max_adjustment_bps: float
+) -> BootstrapResult:
+    """Run the OIS bootstrap and return the raw cdslib result."""
+    trade = trade_date or date.today()
+    return bootstrap(
+        _to_quotes(items),
+        trade,
+        generator=_generator,
+        max_avg_adjustment_bps=max_adjustment_bps,
+    )
+
+
+def zcyc_dict(result: BootstrapResult) -> dict[str, float]:
+    """ZCYC export: future date -> annual-compounded yield (decimal)."""
+    return {
+        (result.spot_date + timedelta(days=p.tenor_days)).isoformat(): round(
+            math.exp(p.zero_rate) - 1.0, 8
+        )
+        for p in result.points
+    }
 
 
 def preview(items: list[QuoteIn], trade_date: date | None) -> dict[str, Any]:
@@ -59,14 +82,9 @@ def run_bootstrap(
     items: list[QuoteIn], trade_date: date | None, max_adjustment_bps: float
 ) -> dict[str, Any]:
     """Bootstrap the curve and package everything the UI needs."""
-    trade = trade_date or date.today()
+    result = compute(items, trade_date, max_adjustment_bps)
+    trade = result.trade_date
     quotes = _to_quotes(items)
-    result = bootstrap(
-        quotes,
-        trade,
-        generator=_generator,
-        max_avg_adjustment_bps=max_adjustment_bps,
-    )
     spot = result.spot_date
 
     curve: list[dict[str, Any]] = []
@@ -106,13 +124,6 @@ def run_bootstrap(
         )
     fits.sort(key=lambda r: r["years"])
 
-    zcyc = {
-        (spot + timedelta(days=p.tenor_days)).isoformat(): round(
-            math.exp(p.zero_rate) - 1.0, 8
-        )
-        for p in result.points
-    }
-
     return {
         "trade_date": trade.isoformat(),
         "spot_date": spot.isoformat(),
@@ -122,5 +133,5 @@ def run_bootstrap(
         "curve": curve,
         "forwards": forwards,
         "fits": fits,
-        "zcyc": zcyc,
+        "zcyc": zcyc_dict(result),
     }

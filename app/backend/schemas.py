@@ -23,3 +23,23 @@ class QuotesRequest(BaseModel):
 
 class BootstrapRequest(QuotesRequest):
     max_adjustment_bps: float = 15.0
+
+
+class IssuerIn(BaseModel):
+    name: str
+    recovery_rate: float = 0.40
+    moex_emitent_id: int | None = None
+
+
+class RecoveryPatch(BaseModel):
+    recovery_rate: float
+
+
+class AddBondRequest(BaseModel):
+    isin: str
+
+
+class CreditCurveRequest(BaseModel):
+    issuer_id: int
+    rate_curve_id: int
+    trade_date: date | None = None
