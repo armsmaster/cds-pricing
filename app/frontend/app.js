@@ -16,7 +16,13 @@ const DEFAULT_QUOTES = [
 ];
 
 const el = (id) => document.getElementById(id);
-const state = { preview: null, bootstrap: null, curveMode: "both", zcycMode: "annual" };
+const state = {
+  preview: null,
+  bootstrap: null,
+  curveMode: "both",
+  zcycMode: "annual",
+  lastRequest: null,
+};
 
 const PALETTE = {
   text: "#e2e8f0", muted: "#94a3b8", grid: "#334155",
@@ -48,6 +54,22 @@ const HELP = {
   zcyc: "Exportable curve as date \u2192 yield (a decimal fraction). Choose the export " +
     "compounding independently of the chart toggle, then Copy or Download.",
   inspread: "Whether the adjusted mid still lies within the quote's bid/ask.",
+  issuer: "The bond issuer whose credit curve you are building. Recovery rate R " +
+    "(LGD = 1 - R) applies to all its bonds.",
+  recovery: "Assumed recovery rate on default (fraction of face). Higher recovery " +
+    "means lower implied hazard for the same prices.",
+  bonds: "Bonds used to imply the credit curve. Reference data and coupon schedules " +
+    "are fetched from MOEX ISS and stored; each bond is priced to its offer/put date.",
+  ratecurve: "The saved risk-free (OIS) curve used for discounting. Save one on the " +
+    "Rate curve tab first.",
+  hazard: "Bootstrapped hazard rate (default intensity) and the implied credit spread " +
+    "(hazard x LGD), by date.",
+  survival: "Probability the issuer has not defaulted by each future date, implied by " +
+    "the bond prices.",
+  credittable: "Per bond: the market dirty price used, the model dirty price from the " +
+    "fitted curve, and the residual. Weight reflects price reliability.",
+  hazardexport: "Exportable curve as date -> continuously-compounded average hazard " +
+    "rate (fraction).",
 };
 
 let currentHelpBtn = null;
@@ -153,8 +175,10 @@ async function calculate() {
   setStatus("Calculating\u2026");
   try {
     state.bootstrap = await postJSON("/api/bootstrap", body);
+    state.lastRequest = body;
     setStatus("Curve bootstrapped", "ok");
     el("empty-state").hidden = true;
+    el("save-curve").hidden = false;
     for (const id of ["curve-card", "forward-card", "table-card", "zcyc-card"]) {
       el(id).hidden = false;
     }
@@ -323,6 +347,36 @@ function debounce(fn, ms) {
   };
 }
 
+function resizeCharts(root) {
+  root.querySelectorAll(".chart").forEach((div) => {
+    if (div.data) Plotly.Plots.resize(div);
+  });
+}
+
+function activateView(name) {
+  el("view-rate").hidden = name !== "rate";
+  el("view-credit").hidden = name !== "credit";
+  document.querySelectorAll(".tab").forEach((t) =>
+    t.classList.toggle("active", t.dataset.view === name)
+  );
+  resizeCharts(name === "rate" ? el("view-rate") : el("view-credit"));
+  if (name === "credit" && typeof onCreditShown === "function") onCreditShown();
+}
+
+async function saveRateCurve() {
+  if (!state.lastRequest) return;
+  const status = el("save-status");
+  status.textContent = "Saving\u2026";
+  try {
+    const record = await postJSON("/api/rate-curves", state.lastRequest);
+    status.textContent = "Saved: " + record.rate_index + " " + record.trade_date;
+    setTimeout(() => (status.textContent = ""), 3000);
+    if (typeof onRateCurvesChanged === "function") onRateCurvesChanged();
+  } catch (err) {
+    status.textContent = "Save failed: " + err.message;
+  }
+}
+
 function openGuide() {
   guideReturnFocus = document.activeElement;
   el("guide-overlay").hidden = false;
@@ -370,6 +424,11 @@ function init() {
   el("calculate").addEventListener("click", calculate);
   el("copy-zcyc").addEventListener("click", copyZcyc);
   el("download-zcyc").addEventListener("click", downloadZcyc);
+  el("save-curve").addEventListener("click", saveRateCurve);
+
+  document.querySelectorAll(".tab").forEach((tab) =>
+    tab.addEventListener("click", () => activateView(tab.dataset.view))
+  );
 
   wireSegmented("curve-mode", (mode) => {
     state.curveMode = mode;

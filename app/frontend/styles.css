@@ -58,6 +58,76 @@ header h1::before {
 .subtitle { color: var(--muted); font-size: 13px; }
 #open-guide { margin-left: auto; }
 
+/* Tabs -------------------------------------------------------------------- */
+.tabs {
+  display: flex;
+  gap: 4px;
+  padding: 10px 18px 0;
+  border-bottom: 1px solid var(--border);
+}
+.tab {
+  background: transparent;
+  border: 1px solid transparent;
+  border-bottom: none;
+  color: var(--muted);
+  padding: 9px 16px;
+  border-radius: 8px 8px 0 0;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.tab:hover:not(.active) { color: var(--text); }
+.tab.active {
+  color: var(--text);
+  background: var(--panel);
+  border-color: var(--border);
+  margin-bottom: -1px;
+}
+
+/* Credit-view controls ---------------------------------------------------- */
+.group-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--accent);
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+  margin-top: 2px;
+}
+.controls .inline { display: flex; gap: 8px; }
+.controls .inline input { flex: 1; min-width: 0; }
+.new-issuer { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; }
+.new-issuer summary { cursor: pointer; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.3px; }
+.new-issuer[open] { padding-bottom: 12px; }
+.new-issuer label { margin-top: 10px; }
+
+.bond-list { display: flex; flex-direction: column; gap: 6px; }
+.bond-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--panel-2);
+  border: 1px solid var(--border-soft);
+  border-radius: 7px;
+  padding: 6px 8px;
+  font-size: 12.5px;
+}
+.bond-row .bond-main { flex: 1; min-width: 0; }
+.bond-row .bond-isin { font-family: "Cascadia Code", "Consolas", monospace; font-size: 11.5px; }
+.bond-row .bond-sub { color: var(--muted); font-size: 11px; }
+.bond-row .bond-del {
+  flex: none; width: 22px; height: 22px; padding: 0; border-radius: 6px;
+  background: transparent; border: 1px solid var(--border); color: var(--muted); font-size: 14px; line-height: 1;
+}
+.bond-row .bond-del:hover { color: var(--danger); border-color: var(--danger); }
+.bond-list:empty::after { content: "No bonds yet."; color: var(--muted); font-size: 12px; }
+
+.skipped { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; }
+.skipped .pill { background: rgba(251, 191, 36, 0.16); color: var(--amber); }
+
 /* Layout ------------------------------------------------------------------ */
 main {
   display: grid;

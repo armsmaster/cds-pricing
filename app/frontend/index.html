@@ -3,18 +3,24 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>OIS Curve Bootstrapping</title>
+  <title>OIS &amp; Credit Curves</title>
   <link rel="stylesheet" href="styles.css" />
   <script src="plotly.min.js" charset="utf-8"></script>
 </head>
 <body>
   <header>
-    <h1>OIS Curve Bootstrapping</h1>
-    <span class="subtitle">RUONIA / OIS zero-coupon curve from bid&ndash;ask quotes</span>
+    <h1>OIS &amp; Credit Curves</h1>
+    <span class="subtitle">RUONIA zero-coupon &amp; issuer credit curves from market data</span>
     <button id="open-guide" class="btn-secondary" type="button">Guide</button>
   </header>
 
-  <main>
+  <nav class="tabs" role="tablist">
+    <button id="tab-rate" class="tab active" type="button" data-view="rate" role="tab">Rate curve</button>
+    <button id="tab-credit" class="tab" type="button" data-view="credit" role="tab">Credit curves</button>
+  </nav>
+
+  <!-- ============================ RATE VIEW ============================ -->
+  <main id="view-rate">
     <aside class="controls">
       <label>Trade date
         <input type="date" id="trade-date" />
@@ -37,6 +43,8 @@
 
       <button id="calculate" class="btn-primary">Calculate</button>
       <div id="status" class="status" role="status" aria-live="polite"></div>
+      <button id="save-curve" class="btn-secondary" type="button" hidden>Save curve for credit use</button>
+      <div id="save-status" class="copy-status"></div>
 
       <div id="summary" class="stats"></div>
     </aside>
@@ -118,6 +126,117 @@
     </section>
   </main>
 
+  <!-- =========================== CREDIT VIEW =========================== -->
+  <main id="view-credit" hidden>
+    <aside class="controls">
+      <div class="group-title">Issuer
+        <button class="help" type="button" data-help="issuer" aria-label="About issuers" aria-expanded="false">?</button>
+      </div>
+      <label>Select issuer
+        <select id="credit-issuer"></select>
+      </label>
+      <label>
+        <span class="label-row">Recovery rate (R)
+          <button class="help" type="button" data-help="recovery" aria-label="About recovery" aria-expanded="false">?</button>
+        </span>
+        <div class="inline">
+          <input type="number" id="credit-recovery" min="0" max="1" step="0.05" value="0.40" />
+          <button id="save-recovery" class="btn-secondary" type="button">Set</button>
+        </div>
+      </label>
+      <button id="delete-issuer" class="btn-secondary" type="button">Delete issuer</button>
+
+      <details class="new-issuer">
+        <summary>New issuer</summary>
+        <label>Name<input type="text" id="new-issuer-name" placeholder="e.g. RZD" /></label>
+        <label>Recovery rate<input type="number" id="new-issuer-recovery" min="0" max="1" step="0.05" value="0.40" /></label>
+        <button id="add-issuer" class="btn-secondary" type="button">Add issuer</button>
+      </details>
+
+      <div class="group-title">Bonds
+        <button class="help" type="button" data-help="bonds" aria-label="About bonds" aria-expanded="false">?</button>
+      </div>
+      <label>Add bond by ISIN
+        <div class="inline">
+          <input type="text" id="bond-isin" placeholder="RU000A10B115" spellcheck="false" />
+          <button id="add-bond" class="btn-secondary" type="button">Add</button>
+        </div>
+      </label>
+      <p class="hint">Reference data &amp; coupon schedule are fetched from MOEX ISS and stored.</p>
+      <div id="bond-list" class="bond-list"></div>
+
+      <div class="group-title">Compute</div>
+      <label>Trade date
+        <input type="date" id="credit-trade-date" />
+      </label>
+      <label>
+        <span class="label-row">Risk-free curve
+          <button class="help" type="button" data-help="ratecurve" aria-label="About the rate curve" aria-expanded="false">?</button>
+        </span>
+        <select id="credit-rate-curve"></select>
+      </label>
+      <button id="credit-calculate" class="btn-primary">Calculate credit curve</button>
+      <div id="credit-status" class="status" role="status" aria-live="polite"></div>
+      <div id="credit-summary" class="stats"></div>
+    </aside>
+
+    <section class="results">
+      <div id="credit-empty" class="empty-state">
+        Select an issuer, add its bonds, choose a saved rate curve, then Calculate.
+      </div>
+
+      <div class="card" id="hazard-card" hidden>
+        <div class="card-head">
+          <h2>Hazard rate curve</h2>
+          <button class="help" type="button" data-help="hazard" aria-label="About the hazard curve" aria-expanded="false">?</button>
+        </div>
+        <div id="hazard-chart" class="chart"></div>
+      </div>
+
+      <div class="card" id="survival-card" hidden>
+        <div class="card-head">
+          <h2>Survival probability</h2>
+          <button class="help" type="button" data-help="survival" aria-label="About survival" aria-expanded="false">?</button>
+        </div>
+        <div id="survival-chart" class="chart"></div>
+      </div>
+
+      <div class="card full" id="credit-table-card" hidden>
+        <div class="card-head">
+          <h2>Bond repricing</h2>
+          <button class="help" type="button" data-help="credittable" aria-label="About the repricing table" aria-expanded="false">?</button>
+        </div>
+        <div class="table-wrap">
+          <table id="credit-fit-table">
+            <thead>
+              <tr>
+                <th>ISIN</th><th>Maturity</th><th>Source</th>
+                <th>Market dirty</th><th>Model dirty</th><th>Residual</th><th>Weight</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+          <div id="skipped" class="skipped"></div>
+        </div>
+      </div>
+
+      <div class="card full" id="hazard-export-card" hidden>
+        <div class="card-head">
+          <h2>Hazard curve (JSON)</h2>
+          <button class="help" type="button" data-help="hazardexport" aria-label="About the hazard export" aria-expanded="false">?</button>
+        </div>
+        <div class="zcyc-controls">
+          <span class="spacer"></span>
+          <button id="download-hazard" class="btn-secondary" type="button">Download .json</button>
+          <button id="copy-hazard" class="btn-secondary" type="button">Copy</button>
+          <span id="hazard-copy-status" class="copy-status"></span>
+        </div>
+        <textarea id="hazard-json" class="zcyc-output" spellcheck="false" readonly rows="12"></textarea>
+        <p class="hint">Keys are future dates; values are continuously-compounded average hazard rates (fraction).</p>
+      </div>
+    </section>
+  </main>
+
   <div id="popover" class="popover" role="tooltip" hidden></div>
 
   <div id="guide-overlay" class="modal-overlay" hidden>
@@ -127,67 +246,46 @@
         <button id="close-guide" class="modal-close" type="button" aria-label="Close guide">&times;</button>
       </div>
       <div class="modal-body">
-        <p>Build a smooth <strong>zero-coupon yield curve</strong> from OIS bid/ask quotes,
-          preview par rates live, then export the curve as JSON.</p>
+        <p>Two tools, switched with the tabs at the top:</p>
+        <ul>
+          <li><strong>Rate curve</strong> &mdash; bootstrap a RUONIA zero-coupon curve from OIS bid/ask quotes.</li>
+          <li><strong>Credit curves</strong> &mdash; bootstrap an issuer's hazard-rate curve from its bond prices.</li>
+        </ul>
 
-        <h3>Quick start</h3>
+        <h3>Rate curve</h3>
         <ol>
-          <li>Pick a <strong>trade date</strong> (defaults to today).</li>
-          <li>Paste your <strong>OIS quotes</strong> as JSON (see format below) &mdash; the par-rate chart previews instantly.</li>
-          <li>Set the <strong>max adjustment</strong> cap (default 15 bps).</li>
-          <li>Press <strong>Calculate</strong> (or <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>+<kbd>Enter</kbd>).</li>
+          <li>Pick a <strong>trade date</strong> and paste <strong>OIS quotes</strong> (JSON array of
+            <code>{ "rate", "tenor", "bid", "ask" }</code>, bid/ask in %). The par chart previews live.</li>
+          <li>Set the <strong>max adjustment</strong> cap and press <strong>Calculate</strong>
+            (<kbd>Ctrl</kbd>/<kbd>Cmd</kbd>+<kbd>Enter</kbd>).</li>
+          <li>Press <strong>Save curve for credit use</strong> to store it &mdash; credit curves discount off a saved rate curve.</li>
         </ol>
+        <p>The fit is reliability-weighted (by bid/ask spread) with a forward-slope smoothness
+          penalty capped at the average adjustment.</p>
 
-        <h3>Input format</h3>
-        <p>A JSON array of quotes; <code>bid</code>/<code>ask</code> are par rates in <strong>percentage points</strong>
-          (<code>14.35</code> = 14.35%).</p>
-        <pre><code>[
-  { "rate": "RUONIA", "tenor": "3m", "bid": 14.13, "ask": 14.38 },
-  { "rate": "RUONIA", "tenor": "1y", "bid": 14.48, "ask": 14.68 }
-]</code></pre>
-        <ul>
-          <li><code>rate</code> &mdash; overnight index (aliases: <code>rate_name</code>, <code>rate_index</code>, <code>index</code>).</li>
-          <li><code>tenor</code> &mdash; tenor code: <code>1w, 1m, 3m, 6m, 9m, 1y, 2y, 5y, 10y</code> (aliases: <code>tenor_code</code>, <code>code</code>).</li>
-        </ul>
-        <p>All quotes must share the same rate index (one curve per index).</p>
-
-        <h3>Controls</h3>
-        <ul>
-          <li><strong>Trade date</strong> &mdash; valuation date; spot and maturity dates follow the index conventions and holiday calendar.</li>
-          <li><strong>Max adjustment (bps)</strong> &mdash; a hard cap on the <em>average</em> absolute adjustment applied to mids. Lower it to track mids closely; raise it to allow more smoothing.</li>
-        </ul>
-
-        <h3>Reading the results</h3>
-        <ul>
-          <li><strong>Par rates</strong> &mdash; bid/ask markers with a shaded spread band, the mid, and (after Calculate) the <strong>adjusted mid</strong> the fitted curve reprices to.</li>
-          <li><strong>Zero-coupon yield curve</strong> &mdash; fitted zero rates on a monthly grid; toggle annual / continuous / both (chart only).</li>
-          <li><strong>Forward rate curve</strong> &mdash; the instantaneous forward implied by the curve; this is what the smoother keeps flat and hump-free.</li>
-          <li><strong>Par rate adjustments</strong> &mdash; per quote: raw vs adjusted mid, the adjustment in bps, and whether the adjusted mid stays <strong>in spread</strong> (out-of-spread rows are highlighted).</li>
-        </ul>
-
-        <h3>How it works</h3>
-        <p>Mids in illiquid markets are unreliable, so the bootstrap fits the curve by least squares while:</p>
-        <ul>
-          <li><strong>weighting each quote by reliability</strong> (inverse bid/ask spread), so wide-spread quotes absorb most of the adjustment;</li>
-          <li><strong>penalizing the forward-rate slope</strong> to keep the forward curve smooth;</li>
-          <li>increasing smoothing only until genuine kinks are removed, never past the average-adjustment cap.</li>
-        </ul>
-
-        <h3>Export</h3>
-        <p>The <strong>ZCYC JSON</strong> maps each node's future date to its yield (a decimal fraction) at the chosen
-          compounding &mdash; <strong>Annual</strong> (<code>DF = (1+y)^-T</code>) or <strong>Continuous</strong> (<code>DF = e^(-zT)</code>).
-          Use <strong>Copy</strong> or <strong>Download .json</strong>. The export compounding is independent of the chart toggle.</p>
+        <h3>Credit curves</h3>
+        <ol>
+          <li>Create an <strong>issuer</strong> and set its <strong>recovery rate</strong> R (LGD = 1 &minus; R).</li>
+          <li>Add the issuer's <strong>bonds by ISIN</strong> &mdash; reference data and coupon schedules are
+            fetched from MOEX ISS and stored.</li>
+          <li>Pick a <strong>trade date</strong> and a saved <strong>risk-free curve</strong>, then
+            <strong>Calculate credit curve</strong>.</li>
+        </ol>
+        <p>Bonds are priced to their offer/put date. Market dirty prices come from a robust blend of
+          bid/ask, last and WAP; each bond is weighted by how reliable its price is. The hazard curve is
+          bootstrapped so model dirty prices match the market.</p>
 
         <h3>Notes</h3>
         <ul>
-          <li>Shipped indices: <code>RUONIA</code> (RUB), <code>SOFR</code> (USD).</li>
-          <li>Holidays are seeded for <strong>2024&ndash;2026</strong>; dates outside fall back to a weekend-only calendar.</li>
-          <li>Errors (unknown rate, bad tenor, empty or mixed-index quotes) appear in the status line under Calculate.</li>
+          <li>Shipped indices: <code>RUONIA</code> (RUB), <code>SOFR</code> (USD). Bonds are RUB.</li>
+          <li>Holidays are seeded for <strong>2024&ndash;2026</strong>; outside that range a weekend-only calendar is used.</li>
+          <li>Bonds with no usable price on the trade date are skipped and listed under the table.</li>
         </ul>
       </div>
     </div>
   </div>
 
   <script src="app.js"></script>
+  <script src="credit.js"></script>
 </body>
 </html>
