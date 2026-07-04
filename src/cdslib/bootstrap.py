@@ -340,7 +340,7 @@ def bootstrap(
             mid_rate=q.mid,
             model_rate=float(model_rates[j]),
             adjustment_bps=float(model_rates[j] - q.mid) * 1e4,
-            within_spread=q.bid_rate <= model_rates[j] <= q.ask_rate,
+            within_spread=bool(q.bid_rate <= model_rates[j] <= q.ask_rate),
         )
         for j, q in enumerate(quotes)
     )

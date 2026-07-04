@@ -19,6 +19,10 @@ notebook = [
     "ipykernel>=6.29",
     "matplotlib>=3.8",
 ]
+app = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+]
 
 [build-system]
 requires = ["hatchling"]

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OIS Curve Bootstrapping</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
+</head>
+<body>
+  <header>
+    <h1>OIS Curve Bootstrapping</h1>
+    <span class="subtitle">RUONIA / OIS zero-coupon curve from bid&ndash;ask quotes</span>
+  </header>
+
+  <main>
+    <aside class="controls">
+      <label>Trade date
+        <input type="date" id="trade-date" />
+      </label>
+
+      <label>Max adjustment (bps)
+        <input type="number" id="max-adj" value="15" min="0" step="0.5" />
+      </label>
+
+      <label>OIS quotes (JSON)
+        <textarea id="quotes" spellcheck="false" rows="15"></textarea>
+      </label>
+      <p class="hint">
+        Array of <code>{ "rate", "tenor", "bid", "ask" }</code> &mdash; bid/ask in %.
+        Charts preview live; press Calculate to bootstrap (<kbd>Ctrl</kbd>+<kbd>Enter</kbd>).
+      </p>
+
+      <button id="calculate" class="btn-primary">Calculate</button>
+      <div id="status" class="status" role="status" aria-live="polite"></div>
+
+      <div id="summary" class="stats"></div>
+    </aside>
+
+    <section class="results">
+      <div class="card full">
+        <h2>Par rates</h2>
+        <div id="par-chart" class="chart"></div>
+      </div>
+
+      <div id="empty-state" class="empty-state">
+        Press <strong>&nbsp;Calculate&nbsp;</strong> to bootstrap the zero-coupon curve.
+      </div>
+
+      <div class="card" id="curve-card" hidden>
+        <div class="card-head">
+          <h2>Zero-coupon yield curve</h2>
+          <div class="seg" id="curve-mode" role="group" aria-label="Compounding">
+            <button type="button" data-mode="annual" aria-pressed="false">Annual</button>
+            <button type="button" data-mode="continuous" aria-pressed="false">Continuous</button>
+            <button type="button" data-mode="both" class="active" aria-pressed="true">Both</button>
+          </div>
+        </div>
+        <div id="curve-chart" class="chart"></div>
+      </div>
+
+      <div class="card" id="forward-card" hidden>
+        <h2>Forward rate curve</h2>
+        <div id="forward-chart" class="chart"></div>
+      </div>
+
+      <div class="card full" id="table-card" hidden>
+        <h2>Par rate adjustments</h2>
+        <div class="table-wrap">
+          <table id="fit-table">
+            <thead>
+              <tr>
+                <th>Tenor</th><th>Maturity</th><th>Bid</th><th>Ask</th>
+                <th>Raw mid</th><th>Adj mid</th><th>Adj (bps)</th><th>In spread</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card full" id="zcyc-card" hidden>
+        <h2>Zero-coupon yield curve (JSON)</h2>
+        <div class="zcyc-controls">
+          <span class="label">Compounding</span>
+          <div class="seg" id="zcyc-mode" role="group" aria-label="Export compounding">
+            <button type="button" data-mode="annual" class="active" aria-pressed="true">Annual</button>
+            <button type="button" data-mode="continuous" aria-pressed="false">Continuous</button>
+          </div>
+          <span class="spacer"></span>
+          <button id="download-zcyc" class="btn-secondary" type="button">Download .json</button>
+          <button id="copy-zcyc" class="btn-secondary" type="button">Copy</button>
+          <span id="copy-status" class="copy-status"></span>
+        </div>
+        <textarea id="zcyc" class="zcyc-output" spellcheck="false" readonly rows="12"></textarea>
+        <p class="hint">Keys are future dates; values are yields (fraction) at the selected compounding.</p>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
