@@ -84,6 +84,12 @@ docker compose up -d --build
   trusted. Ensure the `.crt` is in `certs/` (PEM format) before building.
 - **Base image pull fails / `ghcr.io` referenced** — make sure `BASE_IMAGE`
   points at your Nexus Docker Hub proxy; the default is a Docker Hub image.
+- **Dependencies still download from `files.pythonhosted.org`** — `uv.lock` pins
+  each wheel to an absolute PyPI URL, and `PIP_INDEX_URL`/`UV_INDEX_URL` only
+  affect index *resolution*. The `Dockerfile` therefore runs `uv lock` before
+  `uv sync` to re-resolve the artifact URLs against your index. This needs your
+  Nexus pypi repo to *serve* the wheels (a proxy/hosted repo — the normal case)
+  rather than redirect to upstream.
 - **`uv sync --frozen` rejects the index** — Nexus normally serves the same
   artifacts as PyPI so the locked hashes match. If uv still objects, either drop
   `--frozen` in the `Dockerfile`, or add the Nexus index to `pyproject.toml`:

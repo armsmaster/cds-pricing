@@ -32,7 +32,10 @@ RUN pip install --no-cache-dir uv
 
 # Install third-party dependencies first for better layer caching.
 COPY pyproject.toml uv.lock ./
+# Re-resolve against the configured index (UV_INDEX_URL) so artifact URLs point at
+# that index (e.g. Nexus) instead of the lock's pinned files.pythonhosted.org URLs.
 RUN --mount=type=cache,target=/root/.cache/uv \
+    uv lock && \
     uv sync --frozen --no-dev --group app --no-install-project
 
 # Copy the library and app, then install the project itself.
