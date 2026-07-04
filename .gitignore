@@ -19,6 +19,9 @@ build/
 # Env files
 .env
 
+# Local database / app data
+data/
+
 # Corporate CA certificates (deploy-time only)
 certs/*.crt
 certs/*.pem
