@@ -1,0 +1,7 @@
+{
+"securities": {
+	"columns": ["secid", "shortname", "regnumber", "name", "isin", "is_traded", "emitent_id", "emitent_title", "emitent_inn", "emitent_okpo", "type", "group", "primary_boardid", "marketprice_boardid"], 
+	"data": [
+		["RU000A10B115", "РЖД 1Р-40R", "4B02-40-65045-D-001P", "РЖД БО 001P-40R", "RU000A10B115", 1, 712, "открытое акционерное общество \"Российские железные дороги\"", "7708503727", "00083262", "exchange_bond", "stock_bonds", "TQCB", "TQCB"]
+	]
+}}
