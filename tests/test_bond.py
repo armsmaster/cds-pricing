@@ -10,6 +10,7 @@ from cdslib import (
     SurvivalCurve,
     ZeroCurve,
     accrued_interest,
+    bond_yield,
     price_bond,
 )
 
@@ -64,3 +65,17 @@ def test_accrued_interest_linear() -> None:
     bond = _bullet(80.0, 2)
     accrued = accrued_interest(bond, BASE + timedelta(days=182))
     assert abs(accrued - 80.0 * 182 / 365) < 1e-9
+
+
+def test_bond_yield_roundtrips_flat_discount() -> None:
+    import math
+
+    bond = _bullet(80.0, 4)
+    rate = 0.10  # continuously compounded
+    discount = _flat_discount(rate)
+    dirty = sum(
+        (cf.coupon + cf.principal) * discount.discount_factor(cf.date)
+        for cf in bond.cashflows
+    )
+    # Effective annual yield of a flat continuous curve is exp(r) - 1.
+    assert abs(bond_yield(bond, dirty, BASE) - (math.exp(rate) - 1.0)) < 1e-6

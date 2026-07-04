@@ -273,9 +273,10 @@ dropdown.
 - **Hazard rate curve** — the bootstrapped default intensity (hazard) and the
   implied **credit spread** (`hazard × LGD`) by date.
 - **Survival probability** — probability the issuer has not defaulted by each date.
-- **Bond repricing** — per bond: the market **dirty** price used and its source,
-  the **model** dirty price from the fitted curve, the residual, and the price
-  **weight**. Bonds with no usable price on the date are listed under the table.
+- **Bond repricing** — per bond: the market **clean** price used (% of nominal) and
+  its source, the **model** clean price from the fitted curve, the residual as % of
+  the market price, and the price **weight**. Bonds with no usable price on the date
+  are listed under the table.
 - **Hazard curve (JSON)** — export `future date → average hazard (fraction)` via
   Copy or Download.
 

@@ -127,6 +127,7 @@ header h1::before {
 
 .skipped { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; }
 .skipped .pill { background: rgba(251, 191, 36, 0.16); color: var(--amber); }
+.skipped-title { margin-top: 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px; color: var(--muted); font-weight: 600; }
 
 /* Layout ------------------------------------------------------------------ */
 main {
@@ -397,18 +398,59 @@ kbd {
 }
 
 /* Table ------------------------------------------------------------------- */
-.table-wrap { overflow-x: auto; }
+.table-wrap { overflow: auto; max-height: 460px; }
 table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
 th, td { padding: 7px 10px; text-align: right; border-bottom: 1px solid var(--border-soft); }
 th:first-child, td:first-child { text-align: left; }
-thead th { color: var(--muted); font-weight: 600; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.3px; }
-tbody tr:hover { background: rgba(56, 189, 248, 0.05); }
+thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--panel);
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+tbody tr:nth-child(even) { background: rgba(148, 163, 184, 0.04); }
+tbody tr:hover { background: rgba(56, 189, 248, 0.08); }
 tr.out-of-spread { background: rgba(248, 113, 113, 0.07); }
 td.adj-pos { color: var(--accent-2); }
 td.adj-neg { color: var(--danger); }
+tfoot td { color: var(--muted); font-size: 12px; border-top: 1px solid var(--border); border-bottom: none; padding-top: 9px; }
 .pill { display: inline-block; padding: 1px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 600; }
 .pill.yes { background: rgba(34, 197, 94, 0.16); color: var(--accent-2); }
 .pill.no { background: rgba(248, 113, 113, 0.16); color: var(--danger); }
+.pill.src-mid { background: rgba(34, 197, 94, 0.16); color: var(--accent-2); }
+.pill.src-soft { background: rgba(148, 163, 184, 0.16); color: var(--muted); }
+.pill.src-close { background: rgba(251, 191, 36, 0.16); color: var(--amber); }
+
+/* Credit repricing table -------------------------------------------------- */
+#credit-fit-table td.bond-cell { text-align: left; }
+.bond-cell .name { font-weight: 600; }
+.bond-cell .isin { font-family: "Cascadia Code", "Consolas", monospace; font-size: 11px; color: var(--muted); }
+td.px { text-align: right; }
+td.px .cell-main { font-variant-numeric: tabular-nums; }
+td.px .cell-sub { color: var(--muted); font-size: 11px; }
+#credit-fit-table td.src, #credit-fit-table th.src { text-align: center; }
+.mat-tenor { color: var(--muted); font-size: 11px; }
+
+/* weight mini-bar */
+td.wcell { text-align: right; }
+.wtrack { display: inline-block; width: 54px; height: 6px; border-radius: 3px; background: var(--panel-2); border: 1px solid var(--border-soft); vertical-align: middle; overflow: hidden; }
+.wbar { display: block; height: 100%; background: var(--accent); border-radius: 3px; }
+
+/* residual diverging bar */
+td.rcell { text-align: right; white-space: nowrap; }
+.rval { display: inline-block; min-width: 52px; text-align: right; }
+.dbar { position: relative; display: inline-block; width: 70px; height: 8px; margin-left: 8px; border-radius: 3px; background: var(--panel-2); border: 1px solid var(--border-soft); vertical-align: middle; }
+.dbar::before { content: ""; position: absolute; left: 50%; top: -1px; bottom: -1px; width: 1px; background: var(--border); }
+.dbar-fill { position: absolute; top: 0; bottom: 0; border-radius: 2px; }
+.dbar-fill.good { background: var(--accent-2); }
+.dbar-fill.warn { background: var(--amber); }
+.dbar-fill.bad { background: var(--danger); }
+
 
 /* ZCYC export ------------------------------------------------------------- */
 .zcyc-controls { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }

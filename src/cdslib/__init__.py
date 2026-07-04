@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from datetime import date
 
-from cdslib.bond import Bond, BondCashflow, accrued_interest, price_bond
+from cdslib.bond import Bond, BondCashflow, accrued_interest, bond_yield, price_bond
 from cdslib.bootstrap import (
     BootstrapResult,
     InstrumentFit,
@@ -58,6 +58,7 @@ __all__ = [
     "accrued_interest",
     "bootstrap",
     "bootstrap_credit_curve",
+    "bond_yield",
     "generate_ois",
     "generate_schedule",
     "price_bond",

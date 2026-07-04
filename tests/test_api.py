@@ -134,7 +134,10 @@ def test_credit_curve_end_to_end(client: TestClient) -> None:
     assert data["fits"][0]["isin"] == ISIN
     assert data["curve"]  # monthly hazard grid
     assert data["hazard_export"]
-    assert data["fits"][0]["model_dirty"] > 0
+    assert data["fits"][0]["model_clean"] > 0
+    assert "residual_pct" in data["fits"][0]
+    assert "name" in data["fits"][0]
+    assert "market_yield" in data["fits"][0]
     assert all(node["hazard"] >= 0 for node in data["curve"])
     assert all("forward" in node for node in data["curve"])
 

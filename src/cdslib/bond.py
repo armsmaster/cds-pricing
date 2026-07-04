@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import math
 from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import date
+
+from scipy.optimize import brentq
 
 from cdslib.curve import ZeroCurve
 from cdslib.survival import SurvivalCurve
@@ -98,3 +101,29 @@ def price_bond(
         prev_survival = surv
         outstanding -= cf.principal
     return pv
+
+
+def bond_yield(
+    bond: Bond, dirty_price: float, valuation_date: date, basis: float = 365.0
+) -> float:
+    """Effective annual yield that discounts the bond's cashflows to ``dirty_price``.
+
+    Solves ``dirty = Σ CFᵢ · (1 + y)^(-τᵢ)`` with ``τ`` in ACT/365 years to each
+    future cashflow (to the effective maturity). Returns ``nan`` if it cannot be
+    bracketed.
+    """
+    flows = [
+        ((cf.date - valuation_date).days / basis, cf.coupon + cf.principal)
+        for cf in _future(bond.cashflows, valuation_date)
+    ]
+    flows = [(t, a) for t, a in flows if a != 0.0 and t > 0]
+    if not flows or dirty_price <= 0:
+        return float("nan")
+
+    def diff(y: float) -> float:
+        return sum(a * math.pow(1.0 + y, -t) for t, a in flows) - dirty_price
+
+    try:
+        return float(brentq(diff, -0.99, 10.0, maxiter=200))
+    except ValueError:
+        return float("nan")

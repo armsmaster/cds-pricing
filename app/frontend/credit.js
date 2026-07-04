@@ -19,10 +19,6 @@ function escapeHtml(value) {
   );
 }
 
-function fmt(x) {
-  return Number(x).toFixed(2);
-}
-
 async function apiFetch(method, url, body) {
   const opts = { method, headers: {} };
   if (body !== undefined) {
@@ -309,24 +305,71 @@ function renderSurvivalChart() {
   Plotly.react("survival-chart", traces, layout, PLOT_CONFIG);
 }
 
+function _sourceClass(source) {
+  if (source === "mid") return "src-mid";
+  if (source === "last" || source === "waprice") return "src-soft";
+  return "src-close";
+}
+
+function _residClass(pct) {
+  const a = Math.abs(pct);
+  if (a <= 0.1) return "good";
+  if (a <= 0.5) return "warn";
+  return "bad";
+}
+
 function renderCreditTable() {
   const r = creditState.result;
+  const maxWeight = Math.max(1e-9, ...r.fits.map((f) => f.weight));
+  const RESID_FULL = 1.0; // % residual that fills half the diverging bar
+
   el("credit-fit-table").querySelector("tbody").innerHTML = r.fits
     .map((f) => {
-      const bad = Math.abs(f.residual) > 0.02 * f.market_dirty;
+      const wpct = Math.min(100, (f.weight / maxWeight) * 100);
+      const rp = f.residual_pct;
+      const half = Math.min(50, (Math.abs(rp) / RESID_FULL) * 50);
+      const market_yield = f.market_yield != null ? Number(f.market_yield).toFixed(2) + "%" : "\u2014";
+      const model_yield = f.model_yield != null ? Number(f.model_yield).toFixed(2) + "%" : "\u2014";
+      const cls = _residClass(rp);
+      const fill =
+        rp >= 0
+          ? `left:50%;width:${half}%;`
+          : `left:${50 - half}%;width:${half}%;`;
       return (
-        "<tr><td>" + escapeHtml(f.isin) + "</td><td>" + f.maturity_date + "</td>" +
-        "<td>" + escapeHtml(f.source) + "</td>" +
-        "<td>" + fmt(f.market_dirty) + "</td><td>" + fmt(f.model_dirty) + "</td>" +
-        '<td class="' + (bad ? "adj-neg" : "") + '">' +
-        (f.residual >= 0 ? "+" : "") + fmt(f.residual) + "</td>" +
-        "<td>" + Number(f.weight).toFixed(2) + "</td></tr>"
+        '<tr><td class="bond-cell"><div class="name">' +
+        escapeHtml(f.name || f.isin) + '</div><div class="isin">' +
+        escapeHtml(f.isin) + "</div></td>" +
+        "<td>" + f.maturity_date +
+        ' <span class="mat-tenor">\u00b7 ' + Number(f.years).toFixed(1) + "y</span></td>" +
+        '<td class="src"><span class="pill ' + _sourceClass(f.source) + '">' +
+        escapeHtml(f.source) + "</span></td>" +
+        '<td class="px"><div class="cell-main">' + Number(f.market_clean).toFixed(3) +
+        '</div><div class="cell-sub">' + market_yield + "</div></td>" +
+        '<td class="px"><div class="cell-main">' + Number(f.model_clean).toFixed(3) +
+        '</div><div class="cell-sub">' + model_yield + "</div></td>" +
+        '<td class="rcell"><span class="rval">' +
+        (rp >= 0 ? "+" : "") + Number(rp).toFixed(2) + "%</span>" +
+        '<span class="dbar"><span class="dbar-fill ' + cls + '" style="' + fill + '"></span></span></td>' +
+        '<td class="wcell"><span class="wtrack"><span class="wbar" style="width:' +
+        wpct.toFixed(0) + '%"></span></span></td></tr>'
       );
     })
     .join("");
-  el("skipped").innerHTML = r.skipped
-    .map((s) => '<span class="pill">' + escapeHtml(s.isin) + ": " + escapeHtml(s.reason) + "</span>")
-    .join("");
+
+  const resids = r.fits.map((f) => Math.abs(f.residual_pct));
+  const avg = resids.reduce((a, b) => a + b, 0) / (resids.length || 1);
+  const max = resids.length ? Math.max(...resids) : 0;
+  el("credit-fit-table").querySelector("tfoot").innerHTML =
+    "<tr><td colspan=\"7\">" +
+    r.fits.length + " bond" + (r.fits.length === 1 ? "" : "s") +
+    " \u00b7 avg |residual| " + avg.toFixed(2) + "% \u00b7 max " + max.toFixed(2) + "%</td></tr>";
+
+  const skip = r.skipped;
+  el("skipped").innerHTML =
+    (skip.length ? '<div class="skipped-title">Excluded (' + skip.length + ")</div>" : "") +
+    skip
+      .map((s) => '<span class="pill">' + escapeHtml(s.isin) + ": " + escapeHtml(s.reason) + "</span>")
+      .join("");
 }
 
 function renderHazardExport() {

@@ -69,8 +69,9 @@ const HELP = {
     "default risk is concentrated in time; the hazard chart's average is its running average.",
   survival: "Probability the issuer has not defaulted by each future date, implied by " +
     "the bond prices.",
-  credittable: "Per bond: the market dirty price used, the model dirty price from the " +
-    "fitted curve, and the residual. Weight reflects price reliability.",
+  credittable: "Per bond (name + ISIN): the market clean price used (% of nominal) with its " +
+    "yield and source, the model clean price and yield, and the residual as % of the market " +
+    "price (bar centred at 0). The weight bar shows each price's relative reliability.",
   hazardexport: "Exportable curve as date -> continuously-compounded average hazard " +
     "rate (fraction).",
 };

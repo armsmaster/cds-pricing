@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from app.backend import moex, repositories
 from app.backend.models import Bond, Issuer, MarketData, RateCurve
 from app.backend.moex import MoexClient
-from cdslib import Tenor, TenorUnit, bootstrap_credit_curve
+from cdslib import Tenor, TenorUnit, bond_yield, bootstrap_credit_curve
 
 _MAX_GRID_MONTHS = 720
 
@@ -145,9 +145,12 @@ def credit_curve(
         meta.append(
             {
                 "isin": bond.isin,
+                "name": bond.name or bond.shortname or bond.isin,
                 "shortname": bond.shortname,
                 "source": md.source,
-                "clean_price": md.clean_price,
+                "market_clean": md.clean_price,
+                "accrued": md.accrued or 0.0,
+                "face": md.face_value or bond.face_value,
             }
         )
 
@@ -159,16 +162,30 @@ def credit_curve(
     )
     recovery = issuer.recovery_rate
 
+    def _yield_pct(quant: object, dirty: float) -> float | None:
+        value = bond_yield(quant, dirty, base) * 100.0  # type: ignore[arg-type]
+        return round(value, 4) if math.isfinite(value) else None
+
     fits = []
-    for info, fit in zip(meta, result.fits, strict=True):
+    for info, fit, quant in zip(meta, result.fits, quant_bonds, strict=True):
+        face = info["face"] or 1.0
+        market_clean = info["market_clean"]
+        model_clean = (fit.model_dirty - info["accrued"]) / face * 100.0
+        residual_pct = (
+            (model_clean - market_clean) / market_clean * 100.0 if market_clean else 0.0
+        )
         fits.append(
             {
-                **info,
+                "isin": info["isin"],
+                "name": info["name"],
+                "source": info["source"],
                 "maturity_date": fit.effective_maturity.isoformat(),
                 "years": fit.years,
-                "market_dirty": round(fit.market_dirty, 4),
-                "model_dirty": round(fit.model_dirty, 4),
-                "residual": round(fit.residual, 4),
+                "market_clean": round(market_clean, 4),
+                "market_yield": _yield_pct(quant, fit.market_dirty),
+                "model_clean": round(model_clean, 4),
+                "model_yield": _yield_pct(quant, fit.model_dirty),
+                "residual_pct": round(residual_pct, 4),
                 "weight": round(fit.weight, 4),
             }
         )
