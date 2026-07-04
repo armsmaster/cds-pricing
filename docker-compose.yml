@@ -1,0 +1,14 @@
+services:
+  app:
+    build: .
+    image: pricing-cds-app
+    ports:
+      - "8127:8000"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "/code/.venv/bin/python", "-c",
+             "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/').status==200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
