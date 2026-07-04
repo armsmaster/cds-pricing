@@ -34,6 +34,26 @@ const PLOT_CONFIG = {
   ],
 };
 
+const HELP = {
+  maxadj: "Upper bound on the average absolute adjustment applied to the mids. " +
+    "Lower it to track mids closely; raise it to allow a smoother forward curve.",
+  par: "Quoted bid/ask/mid par rates; the shaded band is the spread. After Calculate, " +
+    "the adjusted mid shows where the fitted curve reprices each quote.",
+  curve: "Fitted zero-coupon rates on a monthly grid. Toggle annual vs continuous " +
+    "compounding (affects this chart only).",
+  forward: "Instantaneous forward rate implied by the curve \u2014 the quantity the " +
+    "smoother keeps flat and hump-free.",
+  table: "Per quote: raw vs adjusted mid, the adjustment in bps, and whether the " +
+    "adjusted mid still lies within the bid/ask.",
+  zcyc: "Exportable curve as date \u2192 yield (a decimal fraction). Choose the export " +
+    "compounding independently of the chart toggle, then Copy or Download.",
+  inspread: "Whether the adjusted mid still lies within the quote's bid/ask.",
+};
+
+let currentHelpBtn = null;
+let guideReturnFocus = null;
+
+
 function baseLayout(yTitle) {
   const ax = { gridcolor: PALETTE.grid, zerolinecolor: PALETTE.grid, color: PALETTE.muted };
   return {
@@ -303,6 +323,43 @@ function debounce(fn, ms) {
   };
 }
 
+function openGuide() {
+  guideReturnFocus = document.activeElement;
+  el("guide-overlay").hidden = false;
+  el("close-guide").focus();
+}
+
+function closeGuide() {
+  el("guide-overlay").hidden = true;
+  if (guideReturnFocus && guideReturnFocus.focus) guideReturnFocus.focus();
+  guideReturnFocus = null;
+}
+
+function closePopover() {
+  el("popover").hidden = true;
+  if (currentHelpBtn) {
+    currentHelpBtn.setAttribute("aria-expanded", "false");
+    currentHelpBtn = null;
+  }
+}
+
+function toggleHelp(btn) {
+  if (currentHelpBtn === btn) {
+    closePopover();
+    return;
+  }
+  closePopover();
+  const pop = el("popover");
+  pop.textContent = HELP[btn.dataset.help] || "";
+  pop.hidden = false;
+  const r = btn.getBoundingClientRect();
+  const maxLeft = window.scrollX + document.documentElement.clientWidth - pop.offsetWidth - 10;
+  pop.style.top = r.bottom + window.scrollY + 6 + "px";
+  pop.style.left = Math.max(window.scrollX + 8, Math.min(r.left + window.scrollX, maxLeft)) + "px";
+  btn.setAttribute("aria-expanded", "true");
+  currentHelpBtn = btn;
+}
+
 function init() {
   el("trade-date").value = new Date().toISOString().slice(0, 10);
   el("quotes").value = JSON.stringify(DEFAULT_QUOTES, null, 2);
@@ -327,8 +384,31 @@ function init() {
     if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
       e.preventDefault();
       calculate();
+      return;
+    }
+    if (e.key === "Escape") {
+      if (!el("guide-overlay").hidden) closeGuide();
+      else closePopover();
     }
   });
+
+  el("open-guide").addEventListener("click", openGuide);
+  el("close-guide").addEventListener("click", closeGuide);
+  el("guide-overlay").addEventListener("click", (e) => {
+    if (e.target === el("guide-overlay")) closeGuide();
+  });
+
+  document.addEventListener("click", (e) => {
+    const helpBtn = e.target.closest(".help");
+    if (helpBtn) {
+      e.stopPropagation();
+      toggleHelp(helpBtn);
+    } else if (!e.target.closest("#popover")) {
+      closePopover();
+    }
+  });
+  window.addEventListener("scroll", closePopover, true);
+  window.addEventListener("resize", closePopover);
 
   preview();
 }

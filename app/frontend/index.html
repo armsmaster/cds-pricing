@@ -11,6 +11,7 @@
   <header>
     <h1>OIS Curve Bootstrapping</h1>
     <span class="subtitle">RUONIA / OIS zero-coupon curve from bid&ndash;ask quotes</span>
+    <button id="open-guide" class="btn-secondary" type="button">Guide</button>
   </header>
 
   <main>
@@ -19,7 +20,10 @@
         <input type="date" id="trade-date" />
       </label>
 
-      <label>Max adjustment (bps)
+      <label>
+        <span class="label-row">Max adjustment (bps)
+          <button class="help" type="button" data-help="maxadj" aria-label="About max adjustment" aria-expanded="false">?</button>
+        </span>
         <input type="number" id="max-adj" value="15" min="0" step="0.5" />
       </label>
 
@@ -39,7 +43,10 @@
 
     <section class="results">
       <div class="card full">
-        <h2>Par rates</h2>
+        <div class="card-head">
+          <h2>Par rates</h2>
+          <button class="help" type="button" data-help="par" aria-label="About par rates" aria-expanded="false">?</button>
+        </div>
         <div id="par-chart" class="chart"></div>
       </div>
 
@@ -50,28 +57,38 @@
       <div class="card" id="curve-card" hidden>
         <div class="card-head">
           <h2>Zero-coupon yield curve</h2>
-          <div class="seg" id="curve-mode" role="group" aria-label="Compounding">
-            <button type="button" data-mode="annual" aria-pressed="false">Annual</button>
-            <button type="button" data-mode="continuous" aria-pressed="false">Continuous</button>
-            <button type="button" data-mode="both" class="active" aria-pressed="true">Both</button>
+          <div class="head-right">
+            <button class="help" type="button" data-help="curve" aria-label="About the zero curve" aria-expanded="false">?</button>
+            <div class="seg" id="curve-mode" role="group" aria-label="Compounding">
+              <button type="button" data-mode="annual" aria-pressed="false">Annual</button>
+              <button type="button" data-mode="continuous" aria-pressed="false">Continuous</button>
+              <button type="button" data-mode="both" class="active" aria-pressed="true">Both</button>
+            </div>
           </div>
         </div>
         <div id="curve-chart" class="chart"></div>
       </div>
 
       <div class="card" id="forward-card" hidden>
-        <h2>Forward rate curve</h2>
+        <div class="card-head">
+          <h2>Forward rate curve</h2>
+          <button class="help" type="button" data-help="forward" aria-label="About the forward curve" aria-expanded="false">?</button>
+        </div>
         <div id="forward-chart" class="chart"></div>
       </div>
 
       <div class="card full" id="table-card" hidden>
-        <h2>Par rate adjustments</h2>
+        <div class="card-head">
+          <h2>Par rate adjustments</h2>
+          <button class="help" type="button" data-help="table" aria-label="About the adjustments table" aria-expanded="false">?</button>
+        </div>
         <div class="table-wrap">
           <table id="fit-table">
             <thead>
               <tr>
                 <th>Tenor</th><th>Maturity</th><th>Bid</th><th>Ask</th>
-                <th>Raw mid</th><th>Adj mid</th><th>Adj (bps)</th><th>In spread</th>
+                <th>Raw mid</th><th>Adj mid</th><th>Adj (bps)</th>
+                <th>In spread <button class="help" type="button" data-help="inspread" aria-label="About in spread" aria-expanded="false">?</button></th>
               </tr>
             </thead>
             <tbody></tbody>
@@ -80,7 +97,10 @@
       </div>
 
       <div class="card full" id="zcyc-card" hidden>
-        <h2>Zero-coupon yield curve (JSON)</h2>
+        <div class="card-head">
+          <h2>Zero-coupon yield curve (JSON)</h2>
+          <button class="help" type="button" data-help="zcyc" aria-label="About the JSON export" aria-expanded="false">?</button>
+        </div>
         <div class="zcyc-controls">
           <span class="label">Compounding</span>
           <div class="seg" id="zcyc-mode" role="group" aria-label="Export compounding">
@@ -97,6 +117,76 @@
       </div>
     </section>
   </main>
+
+  <div id="popover" class="popover" role="tooltip" hidden></div>
+
+  <div id="guide-overlay" class="modal-overlay" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="guide-title">
+      <div class="modal-head">
+        <h2 id="guide-title">User guide</h2>
+        <button id="close-guide" class="modal-close" type="button" aria-label="Close guide">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>Build a smooth <strong>zero-coupon yield curve</strong> from OIS bid/ask quotes,
+          preview par rates live, then export the curve as JSON.</p>
+
+        <h3>Quick start</h3>
+        <ol>
+          <li>Pick a <strong>trade date</strong> (defaults to today).</li>
+          <li>Paste your <strong>OIS quotes</strong> as JSON (see format below) &mdash; the par-rate chart previews instantly.</li>
+          <li>Set the <strong>max adjustment</strong> cap (default 15 bps).</li>
+          <li>Press <strong>Calculate</strong> (or <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>+<kbd>Enter</kbd>).</li>
+        </ol>
+
+        <h3>Input format</h3>
+        <p>A JSON array of quotes; <code>bid</code>/<code>ask</code> are par rates in <strong>percentage points</strong>
+          (<code>14.35</code> = 14.35%).</p>
+        <pre><code>[
+  { "rate": "RUONIA", "tenor": "3m", "bid": 14.13, "ask": 14.38 },
+  { "rate": "RUONIA", "tenor": "1y", "bid": 14.48, "ask": 14.68 }
+]</code></pre>
+        <ul>
+          <li><code>rate</code> &mdash; overnight index (aliases: <code>rate_name</code>, <code>rate_index</code>, <code>index</code>).</li>
+          <li><code>tenor</code> &mdash; tenor code: <code>1w, 1m, 3m, 6m, 9m, 1y, 2y, 5y, 10y</code> (aliases: <code>tenor_code</code>, <code>code</code>).</li>
+        </ul>
+        <p>All quotes must share the same rate index (one curve per index).</p>
+
+        <h3>Controls</h3>
+        <ul>
+          <li><strong>Trade date</strong> &mdash; valuation date; spot and maturity dates follow the index conventions and holiday calendar.</li>
+          <li><strong>Max adjustment (bps)</strong> &mdash; a hard cap on the <em>average</em> absolute adjustment applied to mids. Lower it to track mids closely; raise it to allow more smoothing.</li>
+        </ul>
+
+        <h3>Reading the results</h3>
+        <ul>
+          <li><strong>Par rates</strong> &mdash; bid/ask markers with a shaded spread band, the mid, and (after Calculate) the <strong>adjusted mid</strong> the fitted curve reprices to.</li>
+          <li><strong>Zero-coupon yield curve</strong> &mdash; fitted zero rates on a monthly grid; toggle annual / continuous / both (chart only).</li>
+          <li><strong>Forward rate curve</strong> &mdash; the instantaneous forward implied by the curve; this is what the smoother keeps flat and hump-free.</li>
+          <li><strong>Par rate adjustments</strong> &mdash; per quote: raw vs adjusted mid, the adjustment in bps, and whether the adjusted mid stays <strong>in spread</strong> (out-of-spread rows are highlighted).</li>
+        </ul>
+
+        <h3>How it works</h3>
+        <p>Mids in illiquid markets are unreliable, so the bootstrap fits the curve by least squares while:</p>
+        <ul>
+          <li><strong>weighting each quote by reliability</strong> (inverse bid/ask spread), so wide-spread quotes absorb most of the adjustment;</li>
+          <li><strong>penalizing the forward-rate slope</strong> to keep the forward curve smooth;</li>
+          <li>increasing smoothing only until genuine kinks are removed, never past the average-adjustment cap.</li>
+        </ul>
+
+        <h3>Export</h3>
+        <p>The <strong>ZCYC JSON</strong> maps each node's future date to its yield (a decimal fraction) at the chosen
+          compounding &mdash; <strong>Annual</strong> (<code>DF = (1+y)^-T</code>) or <strong>Continuous</strong> (<code>DF = e^(-zT)</code>).
+          Use <strong>Copy</strong> or <strong>Download .json</strong>. The export compounding is independent of the chart toggle.</p>
+
+        <h3>Notes</h3>
+        <ul>
+          <li>Shipped indices: <code>RUONIA</code> (RUB), <code>SOFR</code> (USD).</li>
+          <li>Holidays are seeded for <strong>2024&ndash;2026</strong>; dates outside fall back to a weekend-only calendar.</li>
+          <li>Errors (unknown rate, bad tenor, empty or mixed-index quotes) appear in the status line under Calculate.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
 
   <script src="app.js"></script>
 </body>
