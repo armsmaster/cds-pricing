@@ -274,9 +274,9 @@ dropdown.
 
 ### Reading the results
 
-- **Hazard rate curve** — the bootstrapped default intensity (hazard) and the
-  implied **credit spread** (`hazard × LGD`) by date.
-- **Survival probability** — probability the issuer has not defaulted by each date.
+- **Hazard rate curve** — the bootstrapped default intensity (hazard) by date, a
+  continuously-compounded average rate.
+- **Instantaneous hazard rate** — the smooth forward default intensity by date.
 - **Bond repricing** — per bond: the market **clean** price used (% of nominal) and
   its source, the **model** clean price from the fitted curve, the residual as % of
   the market price, and the price **weight**. Bonds with no usable price on the date

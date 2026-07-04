@@ -62,13 +62,11 @@ const HELP = {
     "are fetched from MOEX ISS and stored; each bond is priced to its offer/put date.",
   ratecurve: "The saved risk-free (OIS) curve used for discounting. Save one on the " +
     "Rate curve tab first.",
-  hazard: "Bootstrapped hazard rate (default intensity) and the implied credit spread " +
-    "(hazard x LGD), by date. Both are continuously compounded average rates to each date.",
+  hazard: "Bootstrapped hazard rate (default intensity) by date, a continuously " +
+    "compounded average rate to each date.",
   insthazard: "The instantaneous (forward) hazard \u2014 the local default intensity by " +
     "date. Fitted smoothly on a monthly grid (forward-slope penalty), it shows where " +
     "default risk is concentrated in time; the hazard chart's average is its running average.",
-  survival: "Probability the issuer has not defaulted by each future date, implied by " +
-    "the bond prices.",
   credittable: "Per bond (name + ISIN): the market clean price used (% of nominal) with its " +
     "yield and source, the model clean price and yield, and the residual as % of the market " +
     "price (bar centred at 0). The weight bar shows each price's relative reliability.",

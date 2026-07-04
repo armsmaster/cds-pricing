@@ -335,13 +335,12 @@ async function calculateCredit() {
     creditState.result = result;
     creditStatus("Credit curve bootstrapped", "ok");
     el("credit-empty").hidden = true;
-    for (const id of ["hazard-card", "inst-hazard-card", "survival-card", "credit-table-card", "hazard-export-card"]) {
+    for (const id of ["hazard-card", "inst-hazard-card", "credit-table-card", "hazard-export-card"]) {
       el(id).hidden = false;
     }
     renderCreditSummary();
     renderHazardChart();
     renderInstHazardChart();
-    renderSurvivalChart();
     renderCreditTable();
     renderHazardExport();
     el("download-excel").hidden = false;
@@ -368,14 +367,11 @@ function renderCreditSummary() {
 
 function renderHazardChart() {
   const c = creditState.result.curve;
-  const x = c.map((n) => n.date);
   const traces = [
-    { x, y: c.map((n) => n.hazard), name: "hazard", mode: "lines",
+    { x: c.map((n) => n.date), y: c.map((n) => n.hazard), name: "hazard", mode: "lines",
       line: { color: PALETTE.forward, width: 2 } },
-    { x, y: c.map((n) => n.spread), name: "spread (hazard \u00d7 LGD)", mode: "lines",
-      line: { color: PALETTE.adj, width: 2, dash: "dot" } },
   ];
-  Plotly.react("hazard-chart", traces, baseLayout("rate (%)"), PLOT_CONFIG);
+  Plotly.react("hazard-chart", traces, baseLayout("hazard rate (%)"), PLOT_CONFIG);
 }
 
 function renderInstHazardChart() {
@@ -385,17 +381,6 @@ function renderInstHazardChart() {
       mode: "lines", line: { color: PALETTE.ask, width: 2, shape: "hv" } },
   ];
   Plotly.react("inst-hazard-chart", traces, baseLayout("hazard rate (%)"), PLOT_CONFIG);
-}
-
-function renderSurvivalChart() {
-  const c = creditState.result.curve;
-  const traces = [
-    { x: c.map((n) => n.date), y: c.map((n) => n.survival), name: "survival",
-      mode: "lines", line: { color: PALETTE.annual, width: 2 } },
-  ];
-  const layout = baseLayout("survival probability");
-  layout.yaxis.range = [0, 1.02];
-  Plotly.react("survival-chart", traces, layout, PLOT_CONFIG);
 }
 
 function _sourceClass(source) {
