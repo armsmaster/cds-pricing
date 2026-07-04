@@ -240,6 +240,23 @@ def get_market_data(
     )
 
 
+def set_price_override(
+    session: Session,
+    isin: str,
+    trade_date: object,
+    override_clean: float | None,
+    included: bool,
+) -> MarketData:
+    record = get_market_data(session, isin, trade_date)
+    if record is None:
+        raise KeyError(f"No market data for {isin} on {trade_date}")
+    record.override_clean = override_clean
+    record.included = included
+    session.commit()
+    session.refresh(record)
+    return record
+
+
 # --- rate curves ----------------------------------------------------------
 
 

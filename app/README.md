@@ -265,7 +265,11 @@ dropdown.
 2. **Add bonds by ISIN** (e.g. `RU000A10B115`). Reference data and the coupon
    schedule are fetched from **MOEX ISS** and stored. Bonds are priced to their
    **offer/put date** (post-offer coupons are typically unknown).
-3. **Compute** — pick a **trade date**, choose the saved **risk-free curve**, and
+3. **Review market prices** — the *Market prices* table shows each bond's fetched
+   clean price. Edit a price to **override** it, or untick **Include** to drop a
+   bond; edits are saved per trade date. *Refresh from MOEX* re-pulls prices while
+   keeping your overrides.
+4. **Compute** — pick a **trade date**, choose the saved **risk-free curve**, and
    press **Calculate credit curve**.
 
 ### Reading the results

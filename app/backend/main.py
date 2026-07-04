@@ -18,6 +18,7 @@ from app.backend.schemas import (
     BootstrapRequest,
     CreditCurveRequest,
     IssuerIn,
+    PriceOverride,
     QuotesRequest,
     RecoveryPatch,
 )
@@ -194,6 +195,40 @@ def bond_marketdata(
     except Exception as exc:  # noqa: BLE001 - MOEX failure
         raise HTTPException(status_code=502, detail=f"MOEX error: {exc}") from exc
     return credit_service.market_dict(record)
+
+
+# --- editable market prices ------------------------------------------------
+
+
+@app.get("/api/issuers/{issuer_id}/prices")
+def issuer_prices(
+    issuer_id: int,
+    on: date | None = Query(default=None, alias="date"),
+    refresh: bool = Query(default=False),
+    session: Session = Depends(get_session),
+    client: MoexClient = Depends(get_moex),
+) -> dict[str, Any]:
+    try:
+        return credit_service.issuer_prices(
+            session, client, issuer_id, on or date.today(), force=refresh
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.patch("/api/bonds/{isin}/prices")
+def patch_price(
+    isin: str,
+    request: PriceOverride,
+    on: date | None = Query(default=None, alias="date"),
+    session: Session = Depends(get_session),
+) -> dict[str, Any]:
+    try:
+        return credit_service.set_override(
+            session, isin, on or date.today(), request.override_clean, request.included
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 # --- credit curve ---------------------------------------------------------

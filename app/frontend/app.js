@@ -74,6 +74,9 @@ const HELP = {
     "price (bar centred at 0). The weight bar shows each price's relative reliability.",
   hazardexport: "Exportable curve as date -> continuously-compounded average hazard " +
     "rate (fraction).",
+  pricestable: "Prices fed to the bootstrap. Edit the clean price (% of nominal) to " +
+    "override the MOEX-fetched value, or untick Include to drop a bond. Changes are saved " +
+    "per trade date; Refresh re-pulls from MOEX while keeping your overrides.",
 };
 
 let currentHelpBtn = null;

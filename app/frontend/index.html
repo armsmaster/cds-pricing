@@ -181,6 +181,28 @@
     </aside>
 
     <section class="results">
+      <div class="card full" id="prices-card" hidden>
+        <div class="card-head">
+          <h2>Market prices</h2>
+          <div class="head-right">
+            <button class="help" type="button" data-help="pricestable" aria-label="About market prices" aria-expanded="false">?</button>
+            <button id="refresh-prices" class="btn-secondary" type="button">Refresh from MOEX</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table id="prices-table">
+            <thead>
+              <tr>
+                <th>Bond</th><th>Maturity</th><th class="src">Source</th>
+                <th>Fetched %</th><th>Price % (edit)</th><th class="inc">Include</th><th>Weight</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div id="prices-status" class="hint"></div>
+      </div>
+
       <div id="credit-empty" class="empty-state">
         Select an issuer, add its bonds, choose a saved rate curve, then Calculate.
       </div>
@@ -277,6 +299,8 @@
           <li>Create an <strong>issuer</strong> and set its <strong>recovery rate</strong> R (LGD = 1 &minus; R).</li>
           <li>Add the issuer's <strong>bonds by ISIN</strong> &mdash; reference data and coupon schedules are
             fetched from MOEX ISS and stored.</li>
+          <li>In the <strong>Market prices</strong> table, review the fetched prices; edit a clean price to
+            <strong>override</strong> it, or untick <strong>Include</strong> to drop a bond. Edits are saved per trade date.</li>
           <li>Pick a <strong>trade date</strong> and a saved <strong>risk-free curve</strong>, then
             <strong>Calculate credit curve</strong>.</li>
         </ol>

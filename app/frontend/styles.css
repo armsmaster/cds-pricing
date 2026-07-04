@@ -436,6 +436,13 @@ td.px .cell-sub { color: var(--muted); font-size: 11px; }
 #credit-fit-table td.src, #credit-fit-table th.src { text-align: center; }
 .mat-tenor { color: var(--muted); font-size: 11px; }
 
+/* Editable market prices table */
+.price-input { width: 88px; padding: 4px 6px; text-align: right; font-size: 12.5px; }
+.price-input.overridden { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+#prices-table td.inc, #prices-table th.inc { text-align: center; }
+#prices-table .inc-check { width: 16px; height: 16px; cursor: pointer; accent-color: var(--accent); }
+#prices-table tr.excluded-row { opacity: 0.45; }
+
 /* weight mini-bar */
 td.wcell { text-align: right; }
 .wtrack { display: inline-block; width: 54px; height: 6px; border-radius: 3px; background: var(--panel-2); border: 1px solid var(--border-soft); vertical-align: middle; overflow: hidden; }

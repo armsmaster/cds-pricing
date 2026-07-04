@@ -81,6 +81,7 @@ async function selectIssuer(issuerId) {
   const issuer = creditState.issuers.find((i) => i.id === issuerId);
   if (issuer) el("credit-recovery").value = issuer.recovery_rate;
   await loadBonds();
+  await loadPrices();
 }
 
 async function addIssuer() {
@@ -187,6 +188,7 @@ async function addBond() {
     });
     el("bond-isin").value = "";
     await loadBonds();
+    await loadPrices();
     creditStatus("Added " + isin, "ok");
   } catch (err) {
     creditStatus(err.message, "error");
@@ -199,8 +201,98 @@ async function deleteBond(isin) {
   try {
     await apiFetch("DELETE", "/api/bonds/" + isin);
     await loadBonds();
+    await loadPrices();
   } catch (err) {
     creditStatus(err.message, "error");
+  }
+}
+
+// --- editable market prices ----------------------------------------------
+
+async function loadPrices(force) {
+  if (!creditState.issuerId) {
+    el("prices-card").hidden = true;
+    return;
+  }
+  const tradeDate = el("credit-trade-date").value;
+  if (!tradeDate) return;
+  el("prices-status").textContent = force ? "Refreshing from MOEX\u2026" : "Loading prices\u2026";
+  el("prices-card").hidden = false;
+  try {
+    const url =
+      "/api/issuers/" + creditState.issuerId + "/prices?date=" + tradeDate +
+      (force ? "&refresh=true" : "");
+    const data = await apiFetch("GET", url);
+    creditState.prices = data.prices;
+    renderPricesTable();
+    el("prices-status").textContent = "";
+  } catch (err) {
+    el("prices-status").textContent = err.message;
+  }
+}
+
+function renderPricesTable() {
+  const prices = creditState.prices;
+  const maxWeight = Math.max(1e-9, ...prices.map((p) => p.weight || 0));
+  el("prices-table").querySelector("tbody").innerHTML = prices
+    .map((p) => {
+      const overridden = p.override_clean != null;
+      const value = overridden
+        ? p.override_clean
+        : p.fetched_clean != null
+          ? p.fetched_clean
+          : "";
+      const wpct = Math.min(100, ((p.weight || 0) / maxWeight) * 100);
+      return (
+        '<tr class="' + (p.included ? "" : "excluded-row") + '">' +
+        '<td class="bond-cell"><div class="name">' + escapeHtml(p.name) +
+        '</div><div class="isin">' + escapeHtml(p.isin) + "</div></td>" +
+        "<td>" + (p.maturity_date || "\u2014") +
+        ' <span class="mat-tenor">\u00b7 ' +
+        (p.years != null ? Number(p.years).toFixed(1) : "?") + "y</span></td>" +
+        '<td class="src"><span class="pill ' + _sourceClass(p.source) + '">' +
+        escapeHtml(p.source) + "</span></td>" +
+        "<td>" + (p.fetched_clean != null ? Number(p.fetched_clean).toFixed(3) : "\u2014") + "</td>" +
+        '<td><input class="price-input' + (overridden ? " overridden" : "") +
+        '" type="number" step="0.01" value="' + value + '" data-isin="' + escapeHtml(p.isin) + '" /></td>' +
+        '<td class="inc"><input type="checkbox" class="inc-check" data-isin="' +
+        escapeHtml(p.isin) + '"' + (p.included ? " checked" : "") + " /></td>" +
+        '<td class="wcell"><span class="wtrack"><span class="wbar" style="width:' +
+        wpct.toFixed(0) + '%"></span></span></td></tr>'
+      );
+    })
+    .join("");
+  el("prices-table")
+    .querySelectorAll(".price-input")
+    .forEach((inp) => inp.addEventListener("change", () => onPriceEdit(inp.dataset.isin)));
+  el("prices-table")
+    .querySelectorAll(".inc-check")
+    .forEach((chk) => chk.addEventListener("change", () => onPriceEdit(chk.dataset.isin)));
+}
+
+function _rowInputs(isin) {
+  const table = el("prices-table");
+  return {
+    price: table.querySelector('.price-input[data-isin="' + CSS.escape(isin) + '"]'),
+    include: table.querySelector('.inc-check[data-isin="' + CSS.escape(isin) + '"]'),
+  };
+}
+
+async function onPriceEdit(isin) {
+  const { price, include } = _rowInputs(isin);
+  const raw = price.value.trim();
+  const override = raw === "" ? null : parseFloat(raw);
+  try {
+    const updated = await apiFetch(
+      "PATCH",
+      "/api/bonds/" + isin + "/prices?date=" + el("credit-trade-date").value,
+      { override_clean: override, included: include.checked }
+    );
+    const idx = creditState.prices.findIndex((p) => p.isin === isin);
+    if (idx >= 0) creditState.prices[idx] = updated;
+    renderPricesTable();
+  } catch (err) {
+    el("prices-status").textContent = err.message;
   }
 }
 
@@ -413,6 +505,8 @@ function initCredit() {
   el("credit-issuer").addEventListener("change", (e) =>
     selectIssuer(parseInt(e.target.value, 10))
   );
+  el("credit-trade-date").addEventListener("change", () => loadPrices());
+  el("refresh-prices").addEventListener("click", () => loadPrices(true));
   el("credit-calculate").addEventListener("click", calculateCredit);
   el("copy-hazard").addEventListener("click", copyHazard);
   el("download-hazard").addEventListener("click", downloadHazard);

@@ -89,13 +89,77 @@ def add_bond(
 
 
 def fetch_market(
-    session: Session, client: MoexClient, isin: str, trade_date: date
+    session: Session, client: MoexClient, isin: str, trade_date: date, force: bool = False
 ) -> MarketData:
-    cached = repositories.get_market_data(session, isin, trade_date)
-    if cached is not None and cached.is_priced:
-        return cached
+    if not force:
+        cached = repositories.get_market_data(session, isin, trade_date)
+        if cached is not None and cached.is_priced:
+            return cached
     quote = client.quote(isin, trade_date)
     return repositories.upsert_market_data(session, isin, quote)
+
+
+def _effective_clean(md: MarketData | None) -> float | None:
+    if md is None:
+        return None
+    return md.override_clean if md.override_clean is not None else md.clean_price
+
+
+def price_row(bond: Bond, md: MarketData | None, trade_date: date) -> dict[str, Any]:
+    eff_mat = bond.offer_date or bond.maturity_date
+    years = round((eff_mat - trade_date).days / 365.0, 4) if eff_mat else None
+    return {
+        "isin": bond.isin,
+        "name": bond.name or bond.shortname or bond.isin,
+        "maturity_date": eff_mat.isoformat() if eff_mat else None,
+        "years": years,
+        "source": md.source if md else "unavailable",
+        "fetched_clean": md.clean_price if md else None,
+        "override_clean": md.override_clean if md else None,
+        "effective_clean": _effective_clean(md),
+        "accrued": md.accrued if md else None,
+        "weight": round(md.weight, 4) if md else 0.0,
+        "included": bool(md.included) if md else True,
+        "is_priced": bool(md.is_priced) if md else False,
+    }
+
+
+def issuer_prices(
+    session: Session,
+    client: MoexClient,
+    issuer_id: int,
+    trade_date: date,
+    force: bool = False,
+) -> dict[str, Any]:
+    if repositories.get_issuer(session, issuer_id) is None:
+        raise KeyError(f"Unknown issuer {issuer_id}")
+    rows: list[dict[str, Any]] = []
+    for bond in repositories.list_bonds(session, issuer_id):
+        try:
+            md: MarketData | None = fetch_market(
+                session, client, bond.isin, trade_date, force=force
+            )
+        except Exception:  # noqa: BLE001 - MOEX failure -> row shows unavailable
+            md = None
+        rows.append(price_row(bond, md, trade_date))
+    rows.sort(key=lambda r: (r["years"] is None, r["years"] or 0.0))
+    return {"trade_date": trade_date.isoformat(), "prices": rows}
+
+
+def set_override(
+    session: Session,
+    isin: str,
+    trade_date: date,
+    override_clean: float | None,
+    included: bool,
+) -> dict[str, Any]:
+    record = repositories.set_price_override(
+        session, isin, trade_date, override_clean, included
+    )
+    bond = repositories.get_bond(session, isin)
+    if bond is None:
+        raise KeyError(f"Unknown bond {isin}")
+    return price_row(bond, record, trade_date)
 
 
 def credit_curve(
@@ -136,19 +200,23 @@ def credit_curve(
         except Exception:  # noqa: BLE001 - network/parse failure -> skip this bond
             skipped.append({"isin": bond.isin, "reason": "market data unavailable"})
             continue
-        if not md.is_priced or md.dirty_price is None:
+        if not md.included:
+            skipped.append({"isin": bond.isin, "reason": "excluded"})
+            continue
+        eff_clean = _effective_clean(md)
+        if eff_clean is None or md.face_value is None:
             skipped.append({"isin": bond.isin, "reason": "no usable price"})
             continue
+        dirty = eff_clean / 100.0 * md.face_value + (md.accrued or 0.0)
         quant_bonds.append(quant)
-        dirty_prices.append(md.dirty_price)
+        dirty_prices.append(dirty)
         weights.append(md.weight or 1.0)
         meta.append(
             {
                 "isin": bond.isin,
                 "name": bond.name or bond.shortname or bond.isin,
-                "shortname": bond.shortname,
                 "source": md.source,
-                "market_clean": md.clean_price,
+                "market_clean": eff_clean,
                 "accrued": md.accrued or 0.0,
                 "face": md.face_value or bond.face_value,
             }

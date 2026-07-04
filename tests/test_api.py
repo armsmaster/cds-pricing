@@ -152,3 +152,39 @@ def test_credit_curve_unknown_issuer(client: TestClient) -> None:
         json={"issuer_id": 999, "rate_curve_id": saved["id"], "trade_date": TRADE},
     )
     assert resp.status_code == 404
+
+
+def test_price_override_and_exclude(client: TestClient) -> None:
+    issuer_id = client.post("/api/issuers", json={"name": "RZD"}).json()["id"]
+    client.post(f"/api/issuers/{issuer_id}/bonds", json={"isin": ISIN})
+
+    prices = client.get(f"/api/issuers/{issuer_id}/prices", params={"date": TRADE}).json()
+    assert prices["prices"][0]["is_priced"]
+    assert prices["prices"][0]["included"] is True
+
+    patched = client.patch(
+        f"/api/bonds/{ISIN}/prices",
+        params={"date": TRADE},
+        json={"override_clean": 100.0, "included": True},
+    ).json()
+    assert patched["override_clean"] == 100.0
+    assert patched["effective_clean"] == 100.0
+
+    again = client.get(f"/api/issuers/{issuer_id}/prices", params={"date": TRADE}).json()
+    assert again["prices"][0]["override_clean"] == 100.0
+
+    # Excluding the only bond leaves nothing to bootstrap -> 400.
+    client.patch(
+        f"/api/bonds/{ISIN}/prices",
+        params={"date": TRADE},
+        json={"override_clean": 100.0, "included": False},
+    )
+    saved = client.post(
+        "/api/rate-curves",
+        json={"quotes": RUONIA_QUOTES, "trade_date": TRADE, "max_adjustment_bps": 15},
+    ).json()
+    resp = client.post(
+        "/api/credit-curve",
+        json={"issuer_id": issuer_id, "rate_curve_id": saved["id"], "trade_date": TRADE},
+    )
+    assert resp.status_code == 400

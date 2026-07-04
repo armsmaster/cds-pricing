@@ -5,7 +5,7 @@ from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, inspect, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
@@ -36,7 +36,21 @@ def create_session_factory(url: str) -> sessionmaker[Session]:
     from app.backend import models  # noqa: F401  (register mappers)
 
     Base.metadata.create_all(engine)
+    _ensure_columns(
+        engine,
+        "market_data",
+        {"override_clean": "FLOAT", "included": "BOOLEAN DEFAULT 1"},
+    )
     return sessionmaker(bind=engine, expire_on_commit=False)
+
+
+def _ensure_columns(engine: Engine, table: str, columns: dict[str, str]) -> None:
+    """Add missing columns to an existing table (lightweight, no Alembic)."""
+    existing = {col["name"] for col in inspect(engine).get_columns(table)}
+    with engine.begin() as conn:
+        for name, ddl in columns.items():
+            if name not in existing:
+                conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {name} {ddl}"))
 
 
 _session_factory: sessionmaker[Session] | None = None

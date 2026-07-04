@@ -43,3 +43,8 @@ class CreditCurveRequest(BaseModel):
     issuer_id: int
     rate_curve_id: int
     trade_date: date | None = None
+
+
+class PriceOverride(BaseModel):
+    override_clean: float | None = None
+    included: bool = True

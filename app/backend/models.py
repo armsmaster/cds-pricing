@@ -101,6 +101,8 @@ class MarketData(Base):
     close: Mapped[float | None] = mapped_column(default=None)
     legal_close: Mapped[float | None] = mapped_column(default=None)
     market_price: Mapped[float | None] = mapped_column(default=None)
+    override_clean: Mapped[float | None] = mapped_column(default=None)
+    included: Mapped[bool] = mapped_column(default=True)
     fetched_at: Mapped[datetime] = mapped_column(default=_now)
 
 
