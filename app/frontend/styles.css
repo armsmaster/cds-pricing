@@ -17,6 +17,8 @@
 
 * { box-sizing: border-box; }
 
+[hidden] { display: none !important; }
+
 html { scrollbar-color: var(--border) transparent; }
 
 body {
