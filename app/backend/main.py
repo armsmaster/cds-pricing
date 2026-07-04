@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from collections.abc import Awaitable, Callable, Iterator
 from datetime import date
 from pathlib import Path
@@ -25,11 +26,19 @@ from app.backend.schemas import (
 
 _FRONTEND = Path(__file__).resolve().parent.parent / "frontend"
 
+_BUNDLE = "/etc/ssl/certs/ca-certificates.crt"
+
 app = FastAPI(title="OIS Curve & Credit Bootstrapping")
 
 
 def get_moex() -> Iterator[MoexClient]:
-    client = MoexClient()
+    raw = os.environ.get("PCDS_MOEX_VERIFY")
+    if raw is not None:
+        verify_disable = raw.lower() in ("0", "false", "no")
+        verify: bool | str = not verify_disable
+    else:
+        verify = _BUNDLE if os.path.isfile(_BUNDLE) else True
+    client = MoexClient(verify=verify)
     try:
         yield client
     finally:

@@ -94,8 +94,15 @@ The Credit-curves feature fetches bond reference data and prices from
 - Behind a corporate forward proxy, set `HTTP_PROXY` / `HTTPS_PROXY` in `.env`.
   `NO_PROXY` already keeps the localhost healthcheck off the proxy — extend it
   with internal hosts if required.
-- TLS is verified against the same corporate CA baked in at build time (from
-  `certs/`), so a TLS-intercepting proxy works without extra runtime config.
+- **TLS interception & certificate errors:** the corporate root CA must be in
+  `certs/` at build time. It is baked into the system trust store so `httpx`
+  (the MOEX client) trusts it. If MOEX calls still fail with SSL errors:
+  1. Ensure the CA file is in `certs/` (PEM format), then rebuild.
+  2. The app uses the system CA bundle (`/etc/ssl/certs/ca-certificates.crt`)
+     for MOEX calls — you can verify it includes your CA with
+     `docker compose exec app openssl crl2pkcs7 -nocrl ...` or similar.
+  3. As a last resort (internal dev only), set `PCDS_MOEX_VERIFY=false` in
+     `.env` to skip TLS verification entirely.
 
 ---
 

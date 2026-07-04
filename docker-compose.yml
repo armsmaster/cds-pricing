@@ -16,6 +16,9 @@ services:
       HTTPS_PROXY: ${HTTPS_PROXY:-}
       # Keep localhost (healthcheck / internal calls) off any proxy.
       NO_PROXY: ${NO_PROXY:-localhost,127.0.0.1,::1}
+      # MOEX TLS verification (default: system CA bundle, which includes certs/).
+      # Set to "false" to disable verification (last resort / internal dev only).
+      PCDS_MOEX_VERIFY: ${PCDS_MOEX_VERIFY:-true}
     volumes:
       # Persist the SQLite database on the host (issuers, bonds, rate curves,
       # cached market data). Survives rebuilds/restarts; back up or reset by

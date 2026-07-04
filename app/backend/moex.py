@@ -21,6 +21,8 @@ from cdslib import Bond, BondCashflow
 DEFAULT_BASE_URL = "https://iss.moex.com/iss"
 DEFAULT_BOARD = "TQCB"
 
+_SYSTEM_CA_BUNDLE = "/etc/ssl/certs/ca-certificates.crt"
+
 # Alias so dataclass fields named ``date`` do not shadow the ``date`` type.
 OptDate = date | None
 
@@ -369,10 +371,18 @@ class MoexClient:
         base_url: str = DEFAULT_BASE_URL,
         client: httpx.Client | None = None,
         timeout: float = 15.0,
+        verify: bool | str = True,
     ) -> None:
         self._base = base_url.rstrip("/")
-        self._client = client if client is not None else httpx.Client(timeout=timeout)
-        self._owns_client = client is None
+        if client is not None:
+            self._client = client
+            self._owns_client = False
+        else:
+            self._client = httpx.Client(
+                timeout=timeout,
+                verify=verify,
+            )
+            self._owns_client = True
 
     def _get(self, path: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
         query: dict[str, Any] = {"iss.meta": "off"}
