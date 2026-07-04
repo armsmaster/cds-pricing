@@ -136,6 +136,7 @@ def test_credit_curve_end_to_end(client: TestClient) -> None:
     assert data["hazard_export"]
     assert data["fits"][0]["model_dirty"] > 0
     assert all(node["hazard"] >= 0 for node in data["curve"])
+    assert all("forward" in node for node in data["curve"])
 
 
 def test_credit_curve_unknown_issuer(client: TestClient) -> None:

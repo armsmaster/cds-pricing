@@ -63,7 +63,10 @@ const HELP = {
   ratecurve: "The saved risk-free (OIS) curve used for discounting. Save one on the " +
     "Rate curve tab first.",
   hazard: "Bootstrapped hazard rate (default intensity) and the implied credit spread " +
-    "(hazard x LGD), by date.",
+    "(hazard x LGD), by date. Both are continuously compounded average rates to each date.",
+  insthazard: "The instantaneous (forward) hazard \u2014 the local default intensity by " +
+    "date. Fitted smoothly on a monthly grid (forward-slope penalty), it shows where " +
+    "default risk is concentrated in time; the hazard chart's average is its running average.",
   survival: "Probability the issuer has not defaulted by each future date, implied by " +
     "the bond prices.",
   credittable: "Per bond: the market dirty price used, the model dirty price from the " +

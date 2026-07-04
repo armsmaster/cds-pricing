@@ -247,11 +247,12 @@ async function calculateCredit() {
     creditState.result = result;
     creditStatus("Credit curve bootstrapped", "ok");
     el("credit-empty").hidden = true;
-    for (const id of ["hazard-card", "survival-card", "credit-table-card", "hazard-export-card"]) {
+    for (const id of ["hazard-card", "inst-hazard-card", "survival-card", "credit-table-card", "hazard-export-card"]) {
       el(id).hidden = false;
     }
     renderCreditSummary();
     renderHazardChart();
+    renderInstHazardChart();
     renderSurvivalChart();
     renderCreditTable();
     renderHazardExport();
@@ -286,6 +287,15 @@ function renderHazardChart() {
       line: { color: PALETTE.adj, width: 2, dash: "dot" } },
   ];
   Plotly.react("hazard-chart", traces, baseLayout("rate (%)"), PLOT_CONFIG);
+}
+
+function renderInstHazardChart() {
+  const c = creditState.result.curve;
+  const traces = [
+    { x: c.map((n) => n.date), y: c.map((n) => n.forward), name: "instantaneous hazard",
+      mode: "lines", line: { color: PALETTE.ask, width: 2, shape: "hv" } },
+  ];
+  Plotly.react("inst-hazard-chart", traces, baseLayout("hazard rate (%)"), PLOT_CONFIG);
 }
 
 function renderSurvivalChart() {

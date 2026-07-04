@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 from datetime import date
 from typing import Any
 
@@ -177,6 +178,8 @@ def credit_curve(
     last_days = max(p.tenor_days for p in curve.points())
     nodes: list[dict[str, Any]] = []
     export: dict[str, float] = {}
+    prev_h = 0.0
+    prev_t = 0.0
     for month in range(1, _MAX_GRID_MONTHS + 1):
         node_date = Tenor(month, TenorUnit.MONTH).add_to(base)
         days = (node_date - base).days
@@ -184,11 +187,16 @@ def credit_curve(
             continue
         hazard = curve.hazard_days(days)
         survival = curve.survival_days(days)
+        years = days / 365.0
+        integrated = -math.log(survival) if survival > 0 else prev_h
+        forward = (integrated - prev_h) / (years - prev_t) if years > prev_t else hazard
+        prev_h, prev_t = integrated, years
         nodes.append(
             {
                 "date": node_date.isoformat(),
-                "years": round(days / 365.0, 4),
+                "years": round(years, 4),
                 "hazard": round(hazard * 100.0, 6),
+                "forward": round(forward * 100.0, 6),
                 "spread": round(hazard * (1.0 - recovery) * 100.0, 6),
                 "survival": round(survival, 8),
             }

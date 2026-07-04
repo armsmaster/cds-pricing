@@ -296,9 +296,10 @@ recovery `R`:
 DirtyPrice = Σ cᵢ·P(tᵢ)·Q(tᵢ) + N·P(T)·Q(T) + R·N·Σ P(tᵢ)·(Q(tᵢ₋₁)−Q(tᵢ))
 ```
 
-A piecewise-constant hazard curve (pillars at each bond's effective maturity) is
-fitted by reliability-weighted least squares with a forward-hazard smoothness
-penalty, so model dirty prices track the market.
+A hazard curve on a **monthly grid** is fitted by reliability-weighted least
+squares so model dirty prices match the market, with a forward-hazard **slope**
+penalty (strength chosen at the L-curve knee) that keeps the instantaneous hazard
+**smooth and hump-free** — the same approach as the OIS forward curve.
 
 ### Data & persistence
 
