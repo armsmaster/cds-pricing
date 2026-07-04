@@ -1,13 +1,34 @@
 # syntax=docker/dockerfile:1
 
-FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
+# Base image and package index are overridable so the image can be built either
+# from public registries (defaults) or through an internal mirror such as Nexus.
+#   BASE_IMAGE     e.g. nexus.example.com:8082/python:3.12-slim-bookworm
+#   PIP_INDEX_URL  e.g. https://nexus.example.com/repository/pypi-proxy/simple
+ARG BASE_IMAGE=python:3.12-slim-bookworm
+FROM ${BASE_IMAGE}
+
+ARG PIP_INDEX_URL=https://pypi.org/simple
 
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
     UV_PYTHON_DOWNLOADS=never \
-    PYTHONUNBUFFERED=1
+    UV_SYSTEM_CERTS=true \
+    PYTHONUNBUFFERED=1 \
+    PIP_INDEX_URL=${PIP_INDEX_URL} \
+    UV_INDEX_URL=${PIP_INDEX_URL} \
+    PIP_CERT=/etc/ssl/certs/ca-certificates.crt \
+    SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
+    REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
 
 WORKDIR /code
+
+# Trust any corporate CA certificates placed in certs/ (needed for TLS-intercepting
+# proxies). The directory is committed with a .gitkeep, so this is a no-op by default.
+COPY certs/ /usr/local/share/ca-certificates/
+RUN update-ca-certificates
+
+# uv itself comes from the (proxied) Python package index.
+RUN pip install --no-cache-dir uv
 
 # Install third-party dependencies first for better layer caching.
 COPY pyproject.toml uv.lock ./

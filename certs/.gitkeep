@@ -1,0 +1,3 @@
+# Place corporate root CA certificate(s) here (e.g. corp-ca.crt) when building
+# behind a TLS-intercepting proxy. They are copied into the image and trusted.
+# Actual .crt files are gitignored and must not be committed.

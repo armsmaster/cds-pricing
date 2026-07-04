@@ -18,3 +18,8 @@ build/
 
 # Env files
 .env
+
+# Corporate CA certificates (deploy-time only)
+certs/*.crt
+certs/*.pem
+

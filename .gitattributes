@@ -1,0 +1,2 @@
+# Keep vendored minified assets byte-identical (no EOL conversion).
+*.min.js binary
