@@ -1,15 +1,18 @@
 # pricing-cds
 
-Tools for **CDS-related interest-rate curve construction**, built around a small,
-well-tested Python library and an interactive web app.
+Tools for **CDS-related curve construction**, built around a small, well-tested
+Python library and an interactive web app.
 
 - **`cdslib`** — a minimal library for term-structure tooling, generic OIS
-  instruments, and smoothing OIS curve bootstrapping.
-- **`app/`** — a FastAPI + Plotly web app that bootstraps a zero-coupon yield
-  curve from OIS bid/ask quotes. See the **[app guide](app/README.md)**.
+  instruments, smoothing OIS curve bootstrapping, and reduced-form bond pricing /
+  issuer credit-curve (hazard) bootstrapping.
+- **`app/`** — a FastAPI + Plotly web app with two tools: bootstrap a zero-coupon
+  yield curve from OIS quotes, and bootstrap an issuer **credit (hazard) curve**
+  from its bond prices (fetched from MOEX ISS). State persists in SQLite. See the
+  **[app guide](app/README.md)** and **[deployment guide](DEPLOY.md)**.
 
-The initial focus is the **RUONIA / RUB** OIS market, but rate indices,
-conventions, and holidays are data-driven and easy to extend.
+The initial focus is the **RUONIA / RUB** market, but rate indices, conventions,
+and holidays are data-driven and easy to extend.
 
 ---
 
@@ -25,8 +28,11 @@ src/cdslib/          # the library
   ois.py             # OISGenerator.generate(rate, tenor, trade_date)
   curve.py           # ZeroCurve (log-linear discounting)
   bootstrap.py       # smoothing OIS curve bootstrap
+  survival.py        # SurvivalCurve (piecewise-constant hazard)
+  bond.py            # bond cashflows + reduced-form dirty price
+  credit_bootstrap.py # issuer credit-curve bootstrap from bond prices
   data/              # rate_indices.json, holidays.json
-app/                 # web app (FastAPI backend + Plotly frontend)
+app/                 # web app (FastAPI backend + Plotly frontend, SQLite)
 notebooks/           # demo notebooks (generators, bootstrap)
 tests/               # pytest suite
 ```

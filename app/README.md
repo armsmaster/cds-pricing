@@ -1,11 +1,15 @@
-# OIS Curve Bootstrapping — App Guide
+# OIS & Credit Curves — App Guide
 
-An interactive web app for building a **zero-coupon (ZC) yield curve** from
-overnight-index-swap (OIS) bid/ask quotes. Paste quotes, preview par rates
-instantly, then bootstrap a smooth curve and export the result as JSON.
+An interactive web app with two tools, switched by the top-nav tabs:
+
+- **Rate curve** — build a **zero-coupon (ZC) yield curve** from overnight-index-swap
+  (OIS) bid/ask quotes; preview par rates live, bootstrap a smooth curve, export JSON.
+- **Credit curves** — build an issuer **hazard-rate / survival curve** from its bond
+  prices (fetched from MOEX ISS), discounting off a saved rate curve.
 
 It is a thin **FastAPI** backend over the [`cdslib`](../README.md) library plus a
-single-page **Plotly** frontend (no build step).
+single-page **Plotly** frontend (no build step). State (issuers, bonds, saved rate
+curves, cached prices) is persisted in SQLite.
 
 ---
 
@@ -238,3 +242,79 @@ Interactive OpenAPI docs are available at **/docs** while the server runs.
 | 400 "All quotes must reference the same rate index" | Split multi-index quotes into separate curves. |
 | Charts look narrow until you resize | Fixed in current build (cards are shown before Plotly renders). Hard-refresh if you edited old assets. |
 | Port 8127 already in use | Another server/container owns it. Stop it, or change the port mapping in `docker-compose.yml`. |
+
+---
+
+## 10. Credit curves (issuer hazard curves)
+
+The **Credit curves** tab implies an issuer's default-risk curve from the market
+prices of its bonds, using a saved risk-free curve for discounting.
+
+### Prerequisite: a saved rate curve
+
+Credit curves discount off a **saved** OIS curve. On the **Rate curve** tab,
+bootstrap a curve and press **Save curve for credit use**. It is stored per
+`(rate index, trade date)` and appears in the Credit tab's *Risk-free curve*
+dropdown.
+
+### Workflow
+
+1. **Create an issuer** (New issuer → name + recovery rate) and select it.
+   - **Recovery rate** `R` is the assumed fraction of face recovered on default;
+     loss-given-default is `LGD = 1 − R`. Edit it and press **Set**.
+2. **Add bonds by ISIN** (e.g. `RU000A10B115`). Reference data and the coupon
+   schedule are fetched from **MOEX ISS** and stored. Bonds are priced to their
+   **offer/put date** (post-offer coupons are typically unknown).
+3. **Compute** — pick a **trade date**, choose the saved **risk-free curve**, and
+   press **Calculate credit curve**.
+
+### Reading the results
+
+- **Hazard rate curve** — the bootstrapped default intensity (hazard) and the
+  implied **credit spread** (`hazard × LGD`) by date.
+- **Survival probability** — probability the issuer has not defaulted by each date.
+- **Bond repricing** — per bond: the market **dirty** price used and its source,
+  the **model** dirty price from the fitted curve, the residual, and the price
+  **weight**. Bonds with no usable price on the date are listed under the table.
+- **Hazard curve (JSON)** — export `future date → average hazard (fraction)` via
+  Copy or Download.
+
+### How prices are chosen
+
+Bond markets here are illiquid, so for each bond on the trade date the app takes a
+robust clean price from whatever is available — **bid/ask mid → last → WAP →
+official close** — converts to a dirty price with the exchange's accrued interest,
+and **weights** the bond by how trustworthy that price is (tight two-sided quotes
+highest). Weights feed the fit so unreliable prices influence the curve less.
+
+### Method
+
+Reduced-form (intensity) model. For discount `P(t)`, survival `Q(t)=exp(−∫λ)`,
+recovery `R`:
+
+```
+DirtyPrice = Σ cᵢ·P(tᵢ)·Q(tᵢ) + N·P(T)·Q(T) + R·N·Σ P(tᵢ)·(Q(tᵢ₋₁)−Q(tᵢ))
+```
+
+A piecewise-constant hazard curve (pillars at each bond's effective maturity) is
+fitted by reliability-weighted least squares with a forward-hazard smoothness
+penalty, so model dirty prices track the market.
+
+### Data & persistence
+
+- Reference/schedule from `iss.moex.com`, fetched on demand and cached; a past
+  **trade date** uses EOD history, today uses the live snapshot.
+- Issuers, bonds, cached prices and saved rate curves persist in SQLite
+  (`data/app.db`; see `../DEPLOY.md`).
+
+### Credit API
+
+| Method & path | Purpose |
+|---|---|
+| `POST /api/rate-curves` (body = a bootstrap request) | Bootstrap **and save** a rate curve. |
+| `GET /api/rate-curves`, `DELETE /api/rate-curves/{id}` | List / delete saved curves. |
+| `POST/GET /api/issuers`, `PATCH/DELETE /api/issuers/{id}` | Manage issuers + recovery. |
+| `POST/GET /api/issuers/{id}/bonds`, `DELETE /api/bonds/{isin}` | Add (fetch from MOEX) / list / remove bonds. |
+| `GET /api/moex/search?q=` | MOEX security search. |
+| `GET /api/bonds/{isin}/marketdata?date=` | Fetch + cache a bond's price. |
+| `POST /api/credit-curve` `{ issuer_id, rate_curve_id, trade_date }` | Bootstrap the credit curve → hazard/survival grid, per-bond fits, skipped bonds, hazard export. |

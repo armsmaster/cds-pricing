@@ -68,6 +68,49 @@ docker compose down
 
 ---
 
+## Data persistence
+
+The app stores issuers, bonds, cached market data and saved rate curves in a
+SQLite database. `docker-compose.yml` bind-mounts it to the host:
+
+```
+./data/app.db   <->   /code/data/app.db
+```
+
+It survives `docker compose up --build`, restarts and image removal.
+
+- **Back up:** copy `data/app.db`.
+- **Reset:** stop the app and delete `data/app.db` (it is recreated empty).
+- Override the location with `PCDS_DB_PATH` if needed.
+
+---
+
+## MOEX ISS access (runtime)
+
+The Credit-curves feature fetches bond reference data and prices from
+`iss.moex.com` on demand and caches them in the database.
+
+- If MOEX is reachable directly (the default), nothing is needed.
+- Behind a corporate forward proxy, set `HTTP_PROXY` / `HTTPS_PROXY` in `.env`.
+  `NO_PROXY` already keeps the localhost healthcheck off the proxy — extend it
+  with internal hosts if required.
+- TLS is verified against the same corporate CA baked in at build time (from
+  `certs/`), so a TLS-intercepting proxy works without extra runtime config.
+
+---
+
+## Credit-curve workflow
+
+Credit curves discount off a **saved** risk-free curve, so the order is:
+
+1. On the **Rate curve** tab, bootstrap a curve and press **Save curve for
+   credit use**.
+2. On the **Credit curves** tab, create an issuer (set its recovery rate), add
+   its bonds by ISIN, pick the trade date and the saved rate curve, then
+   **Calculate credit curve**.
+
+---
+
 ## Plain internet build (defaults)
 
 With normal internet access, no `.env` and no `certs/` are needed:

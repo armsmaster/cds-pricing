@@ -9,6 +9,18 @@ services:
     ports:
       - "8127:8000"
     restart: unless-stopped
+    environment:
+      # Optional corporate forward proxy for outbound calls (e.g. MOEX ISS).
+      # MOEX is reachable directly by default, so these stay empty.
+      HTTP_PROXY: ${HTTP_PROXY:-}
+      HTTPS_PROXY: ${HTTPS_PROXY:-}
+      # Keep localhost (healthcheck / internal calls) off any proxy.
+      NO_PROXY: ${NO_PROXY:-localhost,127.0.0.1,::1}
+    volumes:
+      # Persist the SQLite database on the host (issuers, bonds, rate curves,
+      # cached market data). Survives rebuilds/restarts; back up or reset by
+      # copying/deleting data/app.db.
+      - ./data:/code/data
     healthcheck:
       test: ["CMD", "/code/.venv/bin/python", "-c",
              "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/').status==200 else 1)"]
