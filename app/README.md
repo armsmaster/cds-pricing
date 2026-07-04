@@ -280,7 +280,10 @@ dropdown.
 - **Bond repricing** — per bond: the market **clean** price used (% of nominal) and
   its source, the **model** clean price from the fitted curve, the residual as % of
   the market price, and the price **weight**. Bonds with no usable price on the date
-  are listed under the table.
+  are listed under the table. **Download Excel** exports a macro-free `.xlsx` that
+  reconstructs each bond's model price with live formulas (schedule × discount ×
+  survival, with recovery), interpolating discount factors and survival from IR-curve
+  and credit-curve sheets — so the whole calculation is auditable in Excel.
 - **Hazard curve (JSON)** — export `future date → average hazard (fraction)` via
   Copy or Download.
 

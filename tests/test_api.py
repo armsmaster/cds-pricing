@@ -3,11 +3,13 @@ from __future__ import annotations
 import json
 from collections.abc import Iterator
 from datetime import date
+from io import BytesIO
 from pathlib import Path
 from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
+from openpyxl import load_workbook
 
 from app.backend import moex
 from app.backend.db import create_session_factory, get_session
@@ -152,6 +154,37 @@ def test_credit_curve_unknown_issuer(client: TestClient) -> None:
         json={"issuer_id": 999, "rate_curve_id": saved["id"], "trade_date": TRADE},
     )
     assert resp.status_code == 404
+
+
+def test_credit_curve_excel_download(client: TestClient) -> None:
+    issuer_id = client.post("/api/issuers", json={"name": "RZD"}).json()["id"]
+    client.post(f"/api/issuers/{issuer_id}/bonds", json={"isin": ISIN})
+    rate_curve_id = client.post(
+        "/api/rate-curves",
+        json={"quotes": RUONIA_QUOTES, "trade_date": TRADE, "max_adjustment_bps": 15},
+    ).json()["id"]
+
+    resp = client.get(
+        "/api/credit-curve.xlsx",
+        params={
+            "issuer_id": issuer_id,
+            "rate_curve_id": rate_curve_id,
+            "trade_date": TRADE,
+        },
+    )
+    assert resp.status_code == 200
+    assert "spreadsheetml" in resp.headers["content-type"]
+
+    wb = load_workbook(BytesIO(resp.content))
+    assert {"Summary", "IR Curve", "Credit Curve", ISIN} <= set(wb.sheetnames)
+    formulas = [
+        c.value
+        for row in wb[ISIN].iter_rows()
+        for c in row
+        if isinstance(c.value, str) and c.value.startswith("=")
+    ]
+    assert any(f.startswith("=EXP(") for f in formulas)  # DF / survival interpolation
+    assert any(f.startswith("=SUM(") for f in formulas)  # model dirty total
 
 
 def test_price_override_and_exclude(client: TestClient) -> None:

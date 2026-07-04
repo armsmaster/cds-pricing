@@ -234,7 +234,10 @@
       <div class="card full" id="credit-table-card" hidden>
         <div class="card-head">
           <h2>Bond repricing</h2>
-          <button class="help" type="button" data-help="credittable" aria-label="About the repricing table" aria-expanded="false">?</button>
+          <div class="head-right">
+            <button class="help" type="button" data-help="credittable" aria-label="About the repricing table" aria-expanded="false">?</button>
+            <button id="download-excel" class="btn-secondary" type="button" hidden>Download Excel</button>
+          </div>
         </div>
         <div class="table-wrap">
           <table id="credit-fit-table">
@@ -306,7 +309,8 @@
         </ol>
         <p>Bonds are priced to their offer/put date. Market dirty prices come from a robust blend of
           bid/ask, last and WAP; each bond is weighted by how reliable its price is. The hazard curve is
-          bootstrapped so model dirty prices match the market.</p>
+          bootstrapped so model dirty prices match the market. <strong>Download Excel</strong> on the
+          repricing table exports a macro-free workbook that rebuilds each model price with live formulas.</p>
 
         <h3>Notes</h3>
         <ul>

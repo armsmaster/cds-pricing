@@ -10,7 +10,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 
-from app.backend import credit_service, repositories, service
+from app.backend import credit_service, excel, repositories, service
 from app.backend.db import get_session
 from app.backend.moex import MoexClient
 from app.backend.schemas import (
@@ -248,6 +248,31 @@ def credit_curve_endpoint(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/api/credit-curve.xlsx")
+def credit_curve_excel(
+    issuer_id: int = Query(),
+    rate_curve_id: int = Query(),
+    on: date | None = Query(default=None, alias="trade_date"),
+    session: Session = Depends(get_session),
+    client: MoexClient = Depends(get_moex),
+) -> Response:
+    try:
+        ctx = credit_service.compute_credit(session, client, issuer_id, rate_curve_id, on)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    content = excel.build_workbook(ctx)
+    stem = f"credit_{ctx.issuer_name}_{ctx.trade.isoformat()}".replace(" ", "_")
+    return Response(
+        content=content,
+        media_type=(
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        ),
+        headers={"Content-Disposition": f'attachment; filename="{stem}.xlsx"'},
+    )
 
 
 @app.get("/")

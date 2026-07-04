@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import math
+from dataclasses import dataclass
 from datetime import date
 from typing import Any
 
@@ -10,9 +11,34 @@ from sqlalchemy.orm import Session
 from app.backend import moex, repositories
 from app.backend.models import Bond, Issuer, MarketData, RateCurve
 from app.backend.moex import MoexClient
-from cdslib import Tenor, TenorUnit, bond_yield, bootstrap_credit_curve
+from cdslib import Bond as QuantBond
+from cdslib import (
+    CreditCurveResult,
+    Tenor,
+    TenorUnit,
+    ZeroCurve,
+    bond_yield,
+    bootstrap_credit_curve,
+)
 
 _MAX_GRID_MONTHS = 720
+
+
+@dataclass
+class CreditContext:
+    """Everything a credit-curve calculation produces, for JSON or Excel output."""
+
+    issuer_id: int
+    issuer_name: str
+    rate_curve_id: int
+    recovery: float
+    base: date
+    trade: date
+    discount: ZeroCurve
+    result: CreditCurveResult
+    quant_bonds: list[QuantBond]
+    meta: list[dict[str, Any]]
+    skipped: list[dict[str, str]]
 
 
 def _iso(value: date | None) -> str | None:
@@ -162,13 +188,13 @@ def set_override(
     return price_row(bond, record, trade_date)
 
 
-def credit_curve(
+def compute_credit(
     session: Session,
     client: MoexClient,
     issuer_id: int,
     rate_curve_id: int,
     trade_date: date | None,
-) -> dict[str, Any]:
+) -> CreditContext:
     issuer = repositories.get_issuer(session, issuer_id)
     if issuer is None:
         raise KeyError(f"Unknown issuer {issuer_id}")
@@ -217,6 +243,7 @@ def credit_curve(
                 "name": bond.name or bond.shortname or bond.isin,
                 "source": md.source,
                 "market_clean": eff_clean,
+                "market_dirty": dirty,
                 "accrued": md.accrued or 0.0,
                 "face": md.face_value or bond.face_value,
             }
@@ -228,14 +255,37 @@ def credit_curve(
     result = bootstrap_credit_curve(
         quant_bonds, dirty_prices, discount, issuer.recovery_rate, weights
     )
-    recovery = issuer.recovery_rate
+    return CreditContext(
+        issuer_id=issuer_id,
+        issuer_name=issuer.name,
+        rate_curve_id=rate_curve_id,
+        recovery=issuer.recovery_rate,
+        base=base,
+        trade=trade,
+        discount=discount,
+        result=result,
+        quant_bonds=quant_bonds,
+        meta=meta,
+        skipped=skipped,
+    )
 
-    def _yield_pct(quant: object, dirty: float) -> float | None:
-        value = bond_yield(quant, dirty, base) * 100.0  # type: ignore[arg-type]
+
+def credit_curve(
+    session: Session,
+    client: MoexClient,
+    issuer_id: int,
+    rate_curve_id: int,
+    trade_date: date | None,
+) -> dict[str, Any]:
+    ctx = compute_credit(session, client, issuer_id, rate_curve_id, trade_date)
+    base, recovery = ctx.base, ctx.recovery
+
+    def _yield_pct(quant: QuantBond, dirty: float) -> float | None:
+        value = bond_yield(quant, dirty, base) * 100.0
         return round(value, 4) if math.isfinite(value) else None
 
     fits = []
-    for info, fit, quant in zip(meta, result.fits, quant_bonds, strict=True):
+    for info, fit, quant in zip(ctx.meta, ctx.result.fits, ctx.quant_bonds, strict=True):
         face = info["face"] or 1.0
         market_clean = info["market_clean"]
         model_clean = (fit.model_dirty - info["accrued"]) / face * 100.0
@@ -259,7 +309,7 @@ def credit_curve(
         )
     fits.sort(key=lambda r: r["years"])
 
-    curve = result.curve
+    curve = ctx.result.curve
     last_days = max(p.tenor_days for p in curve.points())
     nodes: list[dict[str, Any]] = []
     export: dict[str, float] = {}
@@ -291,15 +341,15 @@ def credit_curve(
             break
 
     return {
-        "issuer_id": issuer_id,
-        "issuer_name": issuer.name,
-        "rate_curve_id": rate_curve_id,
+        "issuer_id": ctx.issuer_id,
+        "issuer_name": ctx.issuer_name,
+        "rate_curve_id": ctx.rate_curve_id,
         "base_date": base.isoformat(),
-        "trade_date": trade.isoformat(),
+        "trade_date": ctx.trade.isoformat(),
         "recovery_rate": recovery,
-        "smoothing_lambda": result.smoothing_lambda,
+        "smoothing_lambda": ctx.result.smoothing_lambda,
         "curve": nodes,
         "fits": fits,
-        "skipped": skipped,
+        "skipped": ctx.skipped,
         "hazard_export": export,
     }

@@ -344,6 +344,7 @@ async function calculateCredit() {
     renderSurvivalChart();
     renderCreditTable();
     renderHazardExport();
+    el("download-excel").hidden = false;
   } catch (err) {
     creditStatus(err.message, "error");
   } finally {
@@ -491,6 +492,16 @@ function downloadHazard() {
   URL.revokeObjectURL(url);
 }
 
+function downloadExcel() {
+  const r = creditState.result;
+  if (!r) return;
+  const url =
+    "/api/credit-curve.xlsx?issuer_id=" + r.issuer_id +
+    "&rate_curve_id=" + r.rate_curve_id +
+    "&trade_date=" + r.trade_date;
+  window.location.href = url;
+}
+
 function initCredit() {
   el("add-issuer").addEventListener("click", addIssuer);
   el("save-recovery").addEventListener("click", saveRecovery);
@@ -510,6 +521,7 @@ function initCredit() {
   el("credit-calculate").addEventListener("click", calculateCredit);
   el("copy-hazard").addEventListener("click", copyHazard);
   el("download-hazard").addEventListener("click", downloadHazard);
+  el("download-excel").addEventListener("click", downloadExcel);
 }
 
 initCredit();
