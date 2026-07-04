@@ -1,0 +1,18 @@
+{
+  "RUONIA": {
+    "currency": "RUB",
+    "day_count": "ACT/365F",
+    "spot_lag": 1,
+    "payment_lag": 1,
+    "fixed_frequency": "1Y",
+    "business_day_convention": "MODIFIED_FOLLOWING"
+  },
+  "SOFR": {
+    "currency": "USD",
+    "day_count": "ACT/360",
+    "spot_lag": 2,
+    "payment_lag": 2,
+    "fixed_frequency": "1Y",
+    "business_day_convention": "MODIFIED_FOLLOWING"
+  }
+}
