@@ -46,7 +46,13 @@ def create_session_factory(url: str) -> sessionmaker[Session]:
         "rate_curves",
         {"updated_at": "TIMESTAMP"},
     )
-    return sessionmaker(bind=engine, expire_on_commit=False)
+    # Seed reference data from bundled JSON on first startup (tables empty).
+    factory = sessionmaker(bind=engine, expire_on_commit=False)
+    with factory() as seed_session:
+        from app.backend import data_service
+
+        data_service.seed_from_json(seed_session)
+    return factory
 
 
 def _ensure_columns(engine: Engine, table: str, columns: dict[str, str]) -> None:

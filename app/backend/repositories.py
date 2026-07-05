@@ -7,7 +7,17 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.backend import moex
-from app.backend.models import Bond, BondCashflow, CdsPriceCache, Issuer, MarketData, RateCurve
+from app.backend.models import (
+    Bond,
+    BondCashflow,
+    CalendarRegistryModel,
+    CdsPriceCache,
+    HolidayModel,
+    Issuer,
+    MarketData,
+    RateCurve,
+    RateIndex,
+)
 from cdslib import Bond as QuantBond
 from cdslib import CurvePoint, ZeroCurve
 
@@ -388,3 +398,114 @@ def to_zero_curve(record: RateCurve) -> ZeroCurve:
         for d, r in json.loads(record.points_json)
     ]
     return ZeroCurve(base, points)
+
+
+# --- rate indices -------------------------------------------------------
+
+
+def list_rate_indices(session: Session) -> list[RateIndex]:
+    return list(session.scalars(select(RateIndex).order_by(RateIndex.name)))
+
+
+def get_rate_index(session: Session, index_id: int) -> RateIndex | None:
+    return session.get(RateIndex, index_id)
+
+
+def upsert_rate_index(
+    session: Session,
+    index_id: int | None,
+    name: str,
+    currency: str,
+    day_count: str,
+    spot_lag: int,
+    payment_lag: int,
+    fixed_frequency: str,
+    business_day_convention: str,
+) -> RateIndex:
+    record = session.get(RateIndex, index_id) if index_id else None
+    if record is None:
+        record = RateIndex(name=name.upper())
+        session.add(record)
+    record.currency = currency.upper()
+    record.day_count = day_count
+    record.spot_lag = spot_lag
+    record.payment_lag = payment_lag
+    record.fixed_frequency = fixed_frequency
+    record.business_day_convention = business_day_convention
+    session.commit()
+    session.refresh(record)
+    return record
+
+
+def delete_rate_index(session: Session, index_id: int) -> None:
+    record = session.get(RateIndex, index_id)
+    if record is not None:
+        session.delete(record)
+        session.commit()
+
+
+# --- calendars ----------------------------------------------------------
+
+
+def list_calendars(session: Session) -> list[CalendarRegistryModel]:
+    return list(session.scalars(select(CalendarRegistryModel).order_by(CalendarRegistryModel.code)))
+
+
+def get_calendar(session: Session, calendar_id: int) -> CalendarRegistryModel | None:
+    return session.get(CalendarRegistryModel, calendar_id)
+
+
+def create_calendar(
+    session: Session,
+    code: str,
+    description: str,
+    currency: str,
+    is_default_for_cds: bool,
+    is_default_for_ois: bool,
+) -> CalendarRegistryModel:
+    record = CalendarRegistryModel(
+        code=code,
+        description=description,
+        currency=currency.upper(),
+        is_default_for_cds=is_default_for_cds,
+        is_default_for_ois=is_default_for_ois,
+    )
+    session.add(record)
+    session.commit()
+    session.refresh(record)
+    return record
+
+
+def delete_calendar(session: Session, calendar_id: int) -> None:
+    record = session.get(CalendarRegistryModel, calendar_id)
+    if record is not None:
+        session.delete(record)
+        session.commit()
+
+
+# --- holidays -----------------------------------------------------------
+
+
+def list_holidays(session: Session, calendar_id: int) -> list[HolidayModel]:
+    return list(
+        session.scalars(
+            select(HolidayModel)
+            .where(HolidayModel.calendar_id == calendar_id)
+            .order_by(HolidayModel.date)
+        )
+    )
+
+
+def add_holiday(session: Session, calendar_id: int, date_value: date) -> HolidayModel:
+    record = HolidayModel(calendar_id=calendar_id, date=date_value)
+    session.add(record)
+    session.commit()
+    session.refresh(record)
+    return record
+
+
+def delete_holiday(session: Session, holiday_id: int) -> None:
+    record = session.get(HolidayModel, holiday_id)
+    if record is not None:
+        session.delete(record)
+        session.commit()

@@ -133,3 +133,43 @@ class CdsPriceCache(Base):
     trade_date: Mapped[date]
     results_json: Mapped[str] = mapped_column(default="[]")
     cached_at: Mapped[datetime] = mapped_column(default=_now)
+
+
+class RateIndex(Base):
+    __tablename__ = "rate_indices"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(unique=True)
+    currency: Mapped[str] = mapped_column(default="")
+    day_count: Mapped[str] = mapped_column(default="")
+    spot_lag: Mapped[int] = mapped_column(default=0)
+    payment_lag: Mapped[int] = mapped_column(default=0)
+    fixed_frequency: Mapped[str] = mapped_column(default="")
+    business_day_convention: Mapped[str] = mapped_column(default="")
+
+
+class CalendarRegistryModel(Base):
+    __tablename__ = "calendar_registry"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    code: Mapped[str] = mapped_column(unique=True)
+    description: Mapped[str] = mapped_column(default="")
+    currency: Mapped[str] = mapped_column(default="")
+    is_default_for_cds: Mapped[bool] = mapped_column(default=False)
+    is_default_for_ois: Mapped[bool] = mapped_column(default=False)
+
+    dates: Mapped[list[HolidayModel]] = relationship(
+        back_populates="calendar", cascade="all, delete-orphan"
+    )
+
+
+class HolidayModel(Base):
+    __tablename__ = "holidays"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    calendar_id: Mapped[int] = mapped_column(
+        ForeignKey("calendar_registry.id", ondelete="CASCADE")
+    )
+    date: Mapped[date]
+
+    calendar: Mapped[CalendarRegistryModel] = relationship(back_populates="dates")

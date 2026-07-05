@@ -11,7 +11,8 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 
-from app.backend import cds_service, credit_service, excel, repositories, service
+from app.backend import cds_service, credit_service, data_service, excel, repositories, service
+from app.backend import repositories as repo
 from app.backend.db import get_session
 from app.backend.moex import MoexClient
 from app.backend.schemas import (
@@ -462,6 +463,118 @@ def cds_breakdown_excel(
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f'attachment; filename="{name}.xlsx"'},
     )
+
+
+# --- data management --------------------------------------------------------
+
+
+@app.get("/api/data/rate-indices")
+def list_rate_indices(session: Session = Depends(get_session)) -> list[dict[str, Any]]:
+    return [data_service.rate_index_dict(r) for r in repo.list_rate_indices(session)]
+
+
+@app.post("/api/data/rate-indices")
+def create_rate_index(
+    request: dict[str, Any],
+    session: Session = Depends(get_session),
+) -> dict[str, Any]:
+    ri = repo.upsert_rate_index(
+        session,
+        None,
+        str(request.get("name", "")),
+        str(request.get("currency", "")),
+        str(request.get("day_count", "")),
+        int(request.get("spot_lag", 0)),
+        int(request.get("payment_lag", 0)),
+        str(request.get("fixed_frequency", "")),
+        str(request.get("business_day_convention", "")),
+    )
+    return data_service.rate_index_dict(ri)
+
+
+@app.patch("/api/data/rate-indices/{index_id}")
+def patch_rate_index(
+    index_id: int,
+    request: dict[str, Any],
+    session: Session = Depends(get_session),
+) -> dict[str, Any]:
+    existing = repo.get_rate_index(session, index_id)
+    if existing is None:
+        raise HTTPException(status_code=404, detail="Unknown rate index")
+    ri = repo.upsert_rate_index(
+        session,
+        index_id,
+        str(request.get("name", existing.name)),
+        str(request.get("currency", existing.currency)),
+        str(request.get("day_count", existing.day_count)),
+        int(request.get("spot_lag", existing.spot_lag)),
+        int(request.get("payment_lag", existing.payment_lag)),
+        str(request.get("fixed_frequency", existing.fixed_frequency)),
+        str(request.get("business_day_convention", existing.business_day_convention)),
+    )
+    return data_service.rate_index_dict(ri)
+
+
+@app.delete("/api/data/rate-indices/{index_id}")
+def delete_rate_index(
+    index_id: int, session: Session = Depends(get_session)
+) -> dict[str, str]:
+    repo.delete_rate_index(session, index_id)
+    return {"status": "deleted"}
+
+
+@app.get("/api/data/calendars")
+def list_calendars(session: Session = Depends(get_session)) -> list[dict[str, Any]]:
+    return [data_service.calendar_dict(c) for c in repo.list_calendars(session)]
+
+
+@app.post("/api/data/calendars")
+def create_calendar(
+    request: dict[str, Any],
+    session: Session = Depends(get_session),
+) -> dict[str, Any]:
+    cal = repo.create_calendar(
+        session,
+        str(request.get("code", "")),
+        str(request.get("description", "")),
+        str(request.get("currency", "")),
+        bool(request.get("is_default_for_cds", False)),
+        bool(request.get("is_default_for_ois", False)),
+    )
+    return data_service.calendar_dict(cal)
+
+
+@app.delete("/api/data/calendars/{calendar_id}")
+def delete_calendar(
+    calendar_id: int, session: Session = Depends(get_session)
+) -> dict[str, str]:
+    repo.delete_calendar(session, calendar_id)
+    return {"status": "deleted"}
+
+
+@app.get("/api/data/calendars/{calendar_id}/holidays")
+def list_holidays(
+    calendar_id: int, session: Session = Depends(get_session)
+) -> list[dict[str, Any]]:
+    return [data_service.holiday_dict(h) for h in repo.list_holidays(session, calendar_id)]
+
+
+@app.post("/api/data/calendars/{calendar_id}/holidays")
+def add_holiday(
+    calendar_id: int,
+    request: dict[str, Any],
+    session: Session = Depends(get_session),
+) -> dict[str, Any]:
+    h = repo.add_holiday(session, calendar_id, date.fromisoformat(str(request["date"])))
+    return data_service.holiday_dict(h)
+
+
+@app.delete("/api/data/calendars/{calendar_id}/holidays/{holiday_id}")
+def delete_holiday(
+    calendar_id: int, holiday_id: int, session: Session = Depends(get_session)
+) -> dict[str, str]:
+    repo.delete_holiday(session, holiday_id)
+    return {"status": "deleted"}
 
 
 @app.get("/")
