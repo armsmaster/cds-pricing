@@ -28,7 +28,7 @@ _FRONTEND = Path(__file__).resolve().parent.parent / "frontend"
 
 _BUNDLE = "/etc/ssl/certs/ca-certificates.crt"
 
-app = FastAPI(title="OIS Curve & Credit Bootstrapping")
+app = FastAPI(title="CRD — Credit Derivatives Pricing")
 
 
 def get_moex() -> Iterator[MoexClient]:
