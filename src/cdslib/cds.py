@@ -121,11 +121,14 @@ def generate_cds_schedule(
 def _premium_leg(
     schedule: CdsSchedule, coupon: float, discount: ZeroCurve, survival: SurvivalCurve
 ) -> float:
-    return coupon * sum(
-        p.year_fraction * discount.discount_factor(p.payment_date)
-        * survival.survival(p.payment_date)
-        for p in schedule.periods
-    )
+    prev_q = survival.survival(schedule.protection_start)
+    total = 0.0
+    for p in schedule.periods:
+        cur_q = survival.survival(p.payment_date)
+        avg_q = 0.5 * (prev_q + cur_q)
+        total += p.year_fraction * discount.discount_factor(p.payment_date) * avg_q
+        prev_q = cur_q
+    return coupon * total
 
 
 def _protection_leg(
@@ -148,11 +151,14 @@ def _protection_leg(
 def _rpv01(
     schedule: CdsSchedule, discount: ZeroCurve, survival: SurvivalCurve
 ) -> float:
-    return sum(
-        p.year_fraction * discount.discount_factor(p.payment_date)
-        * survival.survival(p.payment_date)
-        for p in schedule.periods
-    )
+    prev_q = survival.survival(schedule.protection_start)
+    total = 0.0
+    for p in schedule.periods:
+        cur_q = survival.survival(p.payment_date)
+        avg_q = 0.5 * (prev_q + cur_q)
+        total += p.year_fraction * discount.discount_factor(p.payment_date) * avg_q
+        prev_q = cur_q
+    return total
 
 
 def price_cds(
