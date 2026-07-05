@@ -62,15 +62,6 @@ def _prev_imm(before: date) -> date:
     return date(before.year - 1, 12, 20)
 
 
-def _add_quarter(imm: date, calendar: HolidayCalendar) -> date:
-    year = imm.year
-    month = imm.month + 3
-    if month > 12:
-        month -= 12
-        year += 1
-    return calendar.adjust(date(year, month, 20), BusinessDayConvention.MODIFIED_FOLLOWING)
-
-
 def generate_cds_schedule(
     trade_date: date, tenor_months: int, calendar: HolidayCalendar
 ) -> CdsSchedule:
@@ -93,7 +84,8 @@ def generate_cds_schedule(
         y += 1
     maturity_unadj = date(y, m, effective_frozen.day)
 
-    unadj = first_unadj
+    unadj_start = rebate_base  # unadjusted IMM before effective date
+    unadj = first_unadj       # unadjusted first coupon IMM after effective date
     periods: list[CdsPeriod] = []
     while unadj <= maturity_unadj:
         start = effective if not periods else periods[-1].accrual_end
@@ -103,11 +95,16 @@ def generate_cds_schedule(
                 accrual_start=start,
                 accrual_end=end,
                 payment_date=end,
-                year_fraction=year_fraction(DayCount.ACT_ACT_ISDA, start, end),
+                year_fraction=year_fraction(DayCount.ACT_ACT_ISDA, unadj_start, unadj),
             )
         )
-        unadj = date(unadj.year, unadj.month, 20)  # actual IMM date
-        unadj = _add_quarter(unadj, calendar)  # next IMM, adjusted
+        unadj_start = unadj
+        y = unadj.year
+        m = unadj.month + 3
+        if m > 12:
+            m -= 12
+            y += 1
+        unadj = date(y, m, 20)  # next unadjusted IMM
 
     protection_start = effective
     protection_end = periods[-1].accrual_end
