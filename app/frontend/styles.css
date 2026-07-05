@@ -255,6 +255,8 @@ button {
 /* Results ----------------------------------------------------------------- */
 .results { display: grid; grid-template-columns: 1fr; gap: 18px; min-width: 0; }
 .results .full { grid-column: 1 / -1; }
+#view-cds .results { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+#view-cds { min-height: 0; }
 
 .card {
   background: var(--panel);
@@ -472,6 +474,7 @@ td.rcell { text-align: right; white-space: nowrap; }
 /* CDS table + accordion detail --------------------------------------- */
 #cds-table tbody tr { cursor: pointer; }
 #cds-table tbody tr.expanded { background: rgba(56, 189, 248, 0.08); }
+#cds-table tbody tr.issuer-break { border-top: 1px solid var(--accent); }
 tr.cds-detail td { padding: 0; border-bottom: none; }
 tr.cds-detail .detail-card {
   padding: 10px 16px 14px;
@@ -483,6 +486,20 @@ tr.cds-detail h4 { font-size: 13px; margin: 0 0 6px; color: var(--accent); }
 tr.cds-detail table { margin-bottom: 8px; }
 tr.cds-detail .leg-summary { color: var(--muted); font-size: 12px; line-height: 1.7; }
 tr.cds-detail .leg-summary b { color: var(--text); }
+
+.detail-summary { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 6px; margin-bottom: 10px; }
+
+.detail-charts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 8px; }
+@media (max-width: 700px) { .detail-charts { grid-template-columns: 1fr; } }
+.detail-chart { width: 100%; height: 200px; }
+
+.detail-card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 8px; }
+.detail-card-head h4 { margin: 0; }
+.detail-download { font-size: 11.5px; padding: 4px 10px; flex-shrink: 0; white-space: nowrap; }
+
+/* CDS results card fills available height */
+#cds-results-card { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+#cds-results-card .table-wrap { max-height: none; flex: 1; }
 
 .checkbox-label {
   display: flex !important;

@@ -325,6 +325,145 @@ def cds_pricing_breakdown(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
+@app.get("/api/cds-pricing.xlsx")
+def cds_pricing_excel(
+    rate_curve_id: int = Query(),
+    issuer_id: int | None = Query(default=None),
+    on: date | None = Query(default=None, alias="trade_date"),
+    session: Session = Depends(get_session),
+    client: MoexClient = Depends(get_moex),
+) -> Response:
+    try:
+        data = cds_service.price_all_cds(
+            session, client, rate_curve_id, on or date.today(), issuer_id
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    import io
+
+    from openpyxl import Workbook
+    from openpyxl.styles import Font
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "CDS Prices"
+    headers = [
+        "Issuer", "Tenor (m)", "Expiry", "Par spread (bp)", "Upfront",
+        "Rebate", "Net premium", "DV01", "Credit DV01",
+    ]
+    for col, text in enumerate(headers, 1):
+        cell = ws.cell(1, col, text)
+        cell.font = Font(bold=True)
+    for i, row in enumerate(data["results"], 2):
+        ws.cell(i, 1, row.get("issuer_name", ""))
+        ws.cell(i, 2, row["tenor_months"])
+        ws.cell(i, 3, row.get("expiry_date", ""))
+        ws.cell(i, 4, row["par_spread"])
+        ws.cell(i, 5, row["upfront"])
+        ws.cell(i, 6, row["rebate"])
+        ws.cell(i, 7, row["net_premium"])
+        ws.cell(i, 8, row["dv01"])
+        ws.cell(i, 9, row["credit_dv01"])
+    buf = io.BytesIO()
+    wb.save(buf)
+    stem = f"cds_{on or date.today()}"
+    return Response(
+        content=buf.getvalue(),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{stem}.xlsx"'},
+    )
+
+
+@app.get("/api/cds-pricing/{issuer_id}/{tenor_months}/breakdown.xlsx")
+def cds_breakdown_excel(
+    issuer_id: int,
+    tenor_months: int,
+    rate_curve_id: int = Query(),
+    on: date | None = Query(default=None, alias="trade_date"),
+    session: Session = Depends(get_session),
+    client: MoexClient = Depends(get_moex),
+) -> Response:
+    try:
+        detail = cds_service.cds_detail(
+            session, client, issuer_id, rate_curve_id, on or date.today(), tenor_months
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    import io
+
+    from openpyxl import Workbook
+    from openpyxl.styles import Font
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Summary"
+    _x = Font(bold=True)
+    rows = [
+        ("Issuer", detail["issuer_name"]),
+        ("Tenor (m)", detail["tenor_months"]),
+        ("Expiry", detail["expiry_date"]),
+        ("Par spread (bp)", detail["par_spread"]),
+        ("Upfront", detail["upfront"]),
+        ("Rebate", detail["rebate"]),
+        ("Net premium", detail["net_premium"]),
+        ("DV01", detail["dv01"]),
+        ("Credit DV01", detail["credit_dv01"]),
+        ("Protection leg", detail["protection_leg"]),
+        ("Premium leg", detail["premium_leg"]),
+        ("RPV01", detail["rpv01"]),
+        ("Recovery rate", detail.get("recovery_rate", "")),
+        ("Base date", detail.get("base_date", "")),
+    ]
+    for i, (k, v) in enumerate(rows, 1):
+        ws.cell(i, 1, k).font = _x
+        ws.cell(i, 2, v)
+
+    cf = wb.create_sheet("Cashflows")
+    ch = ["Date", "Year fraction", "DF", "Survival", "Premium PV", "Protection PV"]
+    for col, text in enumerate(ch, 1):
+        cf.cell(1, col, text).font = _x
+    for i, row in enumerate(detail.get("breakdown", []), 2):
+        cf.cell(i, 1, row.get("date", ""))
+        cf.cell(i, 2, row.get("year_fraction", ""))
+        cf.cell(i, 3, row.get("df", ""))
+        cf.cell(i, 4, row.get("survival", ""))
+        cf.cell(i, 5, row.get("premium_pv", ""))
+        cf.cell(i, 6, row.get("protection_pv", ""))
+
+    if detail.get("discount_nodes"):
+        ir = wb.create_sheet("IR Curve")
+        for col, text in enumerate(["Date", "Years", "Zero rate %"], 1):
+            ir.cell(1, col, text).font = _x
+        for i, n in enumerate(detail["discount_nodes"], 2):
+            ir.cell(i, 1, n.get("date", ""))
+            ir.cell(i, 2, n.get("years", ""))
+            ir.cell(i, 3, n.get("zero_rate_pct", ""))
+
+    if detail.get("hazard_nodes"):
+        hz = wb.create_sheet("Hazard Curve")
+        for col, text in enumerate(["Date", "Years", "Hazard %"], 1):
+            hz.cell(1, col, text).font = _x
+        for i, n in enumerate(detail["hazard_nodes"], 2):
+            hz.cell(i, 1, n.get("date", ""))
+            hz.cell(i, 2, n.get("years", ""))
+            hz.cell(i, 3, n.get("hazard_pct", ""))
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    name = f"cds_detail_{detail['issuer_name']}_{tenor_months}m".replace(" ", "_")
+    return Response(
+        content=buf.getvalue(),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{name}.xlsx"'},
+    )
+
+
 @app.get("/")
 def index() -> FileResponse:
     return FileResponse(_FRONTEND / "index.html")

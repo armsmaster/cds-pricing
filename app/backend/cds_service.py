@@ -190,5 +190,23 @@ def cds_detail(
         "protection_leg": round(result["protection_leg"], 8),
         "premium_leg": round(result["premium_leg"], 8),
         "rpv01": round(result["rpv01"], 8),
+        "recovery_rate": recovery,
+        "base_date": base.isoformat(),
+        "discount_nodes": [
+            {
+                "date": (base + __import__("datetime").timedelta(days=p.tenor_days)).isoformat(),
+                "years": round(p.tenor_days / 365.0, 4),
+                "zero_rate_pct": round(p.zero_rate * 100.0, 6),
+            }
+            for p in discount.points()
+        ],
+        "hazard_nodes": [
+            {
+                "date": (base + __import__("datetime").timedelta(days=p.tenor_days)).isoformat(),
+                "years": round(p.tenor_days / 365.0, 4),
+                "hazard_pct": round(p.hazard * 100.0, 6),
+            }
+            for p in survival.points()
+        ],
         "breakdown": breakdown,
     }

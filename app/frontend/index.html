@@ -295,6 +295,7 @@
 
       <button id="cds-refresh" class="btn-primary">Price CDS</button>
       <div id="cds-status" class="status" role="status" aria-live="polite"></div>
+      <div id="cds-summary" class="stats"></div>
     </aside>
 
     <section class="results">
@@ -305,7 +306,10 @@
       <div class="card full" id="cds-results-card" hidden>
         <div class="card-head">
           <h2>CDS pricing results</h2>
-          <button class="help" type="button" data-help="cdsresults" aria-label="About the results" aria-expanded="false">?</button>
+          <div class="head-right">
+            <button class="help" type="button" data-help="cdsresults" aria-label="About the results" aria-expanded="false">?</button>
+            <button id="cds-download-excel" class="btn-secondary" type="button">Download Excel</button>
+          </div>
         </div>
         <div class="table-wrap">
           <table id="cds-table">
