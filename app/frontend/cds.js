@@ -97,7 +97,7 @@ function renderCdsSummary() {
   const curveOpt = el("cds-rate-curve").selectedOptions[0];
   el("cds-summary").innerHTML = [
     chip("Rate curve", curveOpt ? escapeHtml(curveOpt.textContent) : "\u2014"),
-    chip("Base date", r[0].expiry_date ? "" : el("cds-trade-date").value, ""),
+    chip("Base date", (r[0] && r[0].base_date) || el("cds-trade-date").value),
     chip("Contracts", String(r.length)),
     chip("Issuers", String(issuerSet.size)),
     chip("Standard", String(std.length)),
