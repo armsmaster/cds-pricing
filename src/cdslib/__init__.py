@@ -18,6 +18,16 @@ from cdslib.bootstrap import (
     bootstrap,
 )
 from cdslib.calendar import BusinessDayConvention, CalendarRegistry, HolidayCalendar
+from cdslib.cds import (
+    CdsPeriod,
+    CdsPricingResult,
+    CdsSchedule,
+    cds_breakdown,
+    cds_credit_dv01,
+    cds_dv01,
+    generate_cds_schedule,
+    price_cds,
+)
 from cdslib.conventions import OISConvention, RateIndexRegistry, UnknownRateIndex
 from cdslib.credit_bootstrap import (
     BondPriceFit,
@@ -38,6 +48,9 @@ __all__ = [
     "BootstrapResult",
     "BusinessDayConvention",
     "CalendarRegistry",
+    "CdsPeriod",
+    "CdsPricingResult",
+    "CdsSchedule",
     "CreditCurveResult",
     "CurvePoint",
     "DayCount",
@@ -59,9 +72,14 @@ __all__ = [
     "bootstrap",
     "bootstrap_credit_curve",
     "bond_yield",
+    "cds_breakdown",
+    "cds_credit_dv01",
+    "cds_dv01",
+    "generate_cds_schedule",
     "generate_ois",
     "generate_schedule",
     "price_bond",
+    "price_cds",
     "year_fraction",
 ]
 
