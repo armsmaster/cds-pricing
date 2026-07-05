@@ -25,8 +25,9 @@ body {
   margin: 0;
   font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
   background:
-    radial-gradient(1200px 500px at 100% -10%, #17233b 0%, rgba(23, 35, 59, 0) 60%),
+    radial-gradient(ellipse 70% 60% at 80% 0%, #17233b 0%, rgba(23, 35, 59, 0) 70%),
     var(--bg);
+  background-attachment: fixed;
   color: var(--text);
   -webkit-font-smoothing: antialiased;
 }
