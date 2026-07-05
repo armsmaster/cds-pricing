@@ -510,6 +510,11 @@ tr.cds-detail .leg-summary b { color: var(--text); }
   color: var(--text);
 }
 
+.data-form { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; padding-top: 6px; }
+.data-form button { grid-column: 1 / -1; justify-self: start; }
+
+#calendars-table td.icon-col { text-align: center; width: 50px; }
+
 @media (max-width: 900px) {
   main { grid-template-columns: 1fr; }
   .controls { position: static; }

@@ -19,6 +19,7 @@
     <button id="tab-rate" class="tab active" type="button" data-view="rate" role="tab">Rate curve</button>
     <button id="tab-credit" class="tab" type="button" data-view="credit" role="tab">Credit curves</button>
     <button id="tab-cds" class="tab" type="button" data-view="cds" role="tab">CDS Pricing</button>
+    <button id="tab-data" class="tab" type="button" data-view="data" role="tab">Data</button>
   </nav>
 
   <!-- ============================ RATE VIEW ============================ -->
@@ -328,6 +329,85 @@
     </section>
   </main>
 
+  <!-- =========================== DATA VIEW =========================== -->
+  <main id="view-data" hidden>
+    <aside class="controls">
+      <div class="group-title">Data management</div>
+      <div class="seg" id="data-mode" role="group" aria-label="Data type">
+        <button type="button" data-mode="rates" class="active" aria-pressed="true">Rate indices</button>
+        <button type="button" data-mode="calendars" aria-pressed="false">Calendars</button>
+      </div>
+      <div id="data-status" class="status" role="status" aria-live="polite"></div>
+    </aside>
+
+    <section class="results">
+      <!-- Rate indices -->
+      <div class="card full" id="data-rates-card">
+        <div class="card-head">
+          <h2>Rate indices</h2>
+        </div>
+        <div class="table-wrap">
+          <table id="rates-table">
+            <thead><tr>
+              <th>Name</th><th>Currency</th><th>Day count</th>
+              <th>Spot lag</th><th>Pay lag</th><th>Freq</th><th>BDC</th><th></th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <details class="new-issuer" style="margin-top:10px;padding-top:8px;">
+          <summary>Add rate index</summary>
+          <div class="data-form">
+            <label>Name<input type="text" id="ri-name" placeholder="e.g. SONIA" /></label>
+            <label>Currency<input type="text" id="ri-currency" placeholder="GBP" /></label>
+            <label>Day count<input type="text" id="ri-dc" value="ACT/365F" /></label>
+            <label>Spot lag<input type="number" id="ri-spot" value="0" /></label>
+            <label>Pay lag<input type="number" id="ri-pay" value="0" /></label>
+            <label>Fixed freq<input type="text" id="ri-freq" value="1Y" /></label>
+            <label>BDC<input type="text" id="ri-bdc" value="MODIFIED_FOLLOWING" /></label>
+            <button id="add-rate-index" class="btn-secondary" type="button">Add</button>
+          </div>
+        </details>
+      </div>
+
+      <!-- Calendars -->
+      <div class="card full" id="data-calendars-card" hidden>
+        <div class="card-head">
+          <h2>Calendars</h2>
+        </div>
+        <div class="table-wrap">
+          <table id="calendars-table">
+            <thead><tr>
+              <th>Code</th><th>Description</th><th>Currency</th>
+              <th>CDS default</th><th>OIS default</th>
+              <th>Dates</th><th></th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <details class="new-issuer" style="margin-top:10px;padding-top:8px;">
+          <summary>Add calendar</summary>
+          <div class="data-form">
+            <label>Code<input type="text" id="cal-code" placeholder="EUR_HOLIDAY" /></label>
+            <label>Description<input type="text" id="cal-desc" placeholder="EUR trading holidays" /></label>
+            <label>Currency<input type="text" id="cal-currency" placeholder="EUR" /></label>
+            <label class="checkbox-label"><input type="checkbox" id="cal-cds-def" /> CDS default</label>
+            <label class="checkbox-label"><input type="checkbox" id="cal-ois-def" /> OIS default</label>
+            <button id="add-calendar" class="btn-secondary" type="button">Add</button>
+          </div>
+        </details>
+        <div id="holiday-editor" hidden>
+          <div class="group-title">Holidays</div>
+          <div class="inline" style="margin-top:8px;">
+            <input type="date" id="holiday-date" />
+            <button id="add-holiday" class="btn-secondary" type="button">Add date</button>
+          </div>
+          <div id="holiday-list" class="bond-list" style="margin-top:10px;"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
   <div id="popover" class="popover" role="tooltip" hidden></div>
 
   <div id="guide-overlay" class="modal-overlay" hidden>
@@ -408,5 +488,6 @@
   <script src="app.js"></script>
   <script src="credit.js"></script>
   <script src="cds.js"></script>
+  <script src="data.js"></script>
 </body>
 </html>

@@ -369,6 +369,7 @@ function activateView(name) {
   el("view-rate").hidden = name !== "rate";
   el("view-credit").hidden = name !== "credit";
   el("view-cds").hidden = name !== "cds";
+  el("view-data").hidden = name !== "data";
   document.querySelectorAll(".tab").forEach((t) =>
     t.classList.toggle("active", t.dataset.view === name)
   );
