@@ -72,9 +72,9 @@ def _add_quarter(imm: date, calendar: HolidayCalendar) -> date:
 
 
 def generate_cds_schedule(
-    trade_date: date, tenor_years: int, calendar: HolidayCalendar
+    trade_date: date, tenor_months: int, calendar: HolidayCalendar
 ) -> CdsSchedule:
-    """Build the CDS coupon schedule for a given integer year tenor.
+    """Build the CDS coupon schedule for a given integer-month tenor.
 
     The effective (protection-start) date is ``trade_date + 1``; the first
     coupon is the next IMM date after the effective date. Subsequent coupons
@@ -86,9 +86,12 @@ def generate_cds_schedule(
     effective = calendar.adjust(effective_frozen, BusinessDayConvention.FOLLOWING)
     first_unadj = _next_imm(effective)
     rebate_base = _prev_imm(effective)
-    maturity_unadj = date(
-        effective_frozen.year + tenor_years, effective_frozen.month, effective_frozen.day
-    )
+    m = effective_frozen.month + (tenor_months % 12)
+    y = effective_frozen.year + tenor_months // 12
+    if m > 12:
+        m -= 12
+        y += 1
+    maturity_unadj = date(y, m, effective_frozen.day)
 
     unadj = first_unadj
     periods: list[CdsPeriod] = []

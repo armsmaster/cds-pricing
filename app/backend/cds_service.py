@@ -24,8 +24,8 @@ from cdslib import (
     price_cds,
 )
 
-_STANDARD_TENORS = {1, 2, 3, 5, 7, 10}
-_MAX_TENOR = 10
+_STANDARD_TENORS = {6, 12, 24, 36, 60, 84, 120}  # months
+_MAX_TENOR = 10  # years
 
 _calendar: HolidayCalendar | None = None
 
@@ -107,9 +107,8 @@ def price_all_cds(
         max_node = max(p.tenor_days for p in survival.points()) if survival.points() else 0
 
         issuer_rows: list[dict[str, Any]] = []
-        for quarter in range(4, _MAX_TENOR * 4 + 1):
+        for quarter in range(1, _MAX_TENOR * 4 + 1):
             tenor_months = quarter * 3
-            tenor_years = quarter // 4
             m = base.month + (tenor_months % 12)
             y = base.year + tenor_months // 12
             if m > 12:
@@ -121,12 +120,12 @@ def price_all_cds(
             if (expiry - base).days > max_node:
                 continue
 
-            schedule = generate_cds_schedule(base, tenor_years, calendar)
+            schedule = generate_cds_schedule(base, tenor_months, calendar)
             result = price_cds(schedule, discount, survival, recovery)
             breakdown = cds_breakdown(schedule, discount, survival, recovery)
             dv = cds_dv01(schedule, discount, survival, recovery)
             cdv = cds_credit_dv01(schedule, discount, survival, recovery)
-            is_std = tenor_years in _STANDARD_TENORS and tenor_months % 12 == 0
+            is_std = tenor_months in _STANDARD_TENORS
 
             issuer_rows.append(
                 {
@@ -171,9 +170,8 @@ def cds_detail(
     ctx = credit_service.compute_credit(session, client, issuer_id, rate_curve_id, trade_date)
     survival = ctx.result.curve
     recovery = ctx.recovery
-    tenor_years = tenor_months // 12
 
-    schedule = generate_cds_schedule(base, tenor_years, _get_calendar())
+    schedule = generate_cds_schedule(base, tenor_months, _get_calendar())
     result = price_cds(schedule, discount, survival, recovery)
     breakdown = cds_breakdown(schedule, discount, survival, recovery)
 
