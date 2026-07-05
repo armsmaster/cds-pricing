@@ -207,8 +207,8 @@ async function appendDetailRow(tr, row) {
 
   const summaryHtml =
     '<div class="detail-summary">' +
-    chip("Protection leg", (data.protection_leg || 0).toFixed(8)) +
-    chip("Premium leg", (data.premium_leg || 0).toFixed(8)) +
+    chip("Protection leg", ((data.protection_leg || 0) * 100).toFixed(4) + "%") +
+    chip("Premium leg", ((data.premium_leg || 0) * 100).toFixed(4) + "%") +
     chip("RPV01", (data.rpv01 || 0).toFixed(8)) +
     chip("Recovery", ((data.recovery_rate || 0) * 100).toFixed(0) + "%") +
     chip("Base date", data.base_date || "\u2014") +
