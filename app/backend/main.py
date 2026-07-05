@@ -11,7 +11,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 
-from app.backend import credit_service, excel, repositories, service
+from app.backend import cds_service, credit_service, excel, repositories, service
 from app.backend.db import get_session
 from app.backend.moex import MoexClient
 from app.backend.schemas import (
@@ -282,6 +282,47 @@ def credit_curve_excel(
         ),
         headers={"Content-Disposition": f'attachment; filename="{stem}.xlsx"'},
     )
+
+
+# --- CDS pricing -----------------------------------------------------------
+
+
+@app.get("/api/cds-pricing")
+def cds_pricing(
+    rate_curve_id: int = Query(),
+    issuer_id: int | None = Query(default=None),
+    on: date | None = Query(default=None, alias="trade_date"),
+    refresh: bool = Query(default=False),
+    session: Session = Depends(get_session),
+    client: MoexClient = Depends(get_moex),
+) -> dict[str, Any]:
+    try:
+        return cds_service.price_all_cds(
+            session, client, rate_curve_id, on or date.today(), issuer_id, refresh
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/api/cds-pricing/{issuer_id}/{tenor_months}/breakdown")
+def cds_pricing_breakdown(
+    issuer_id: int,
+    tenor_months: int,
+    rate_curve_id: int = Query(),
+    on: date | None = Query(default=None, alias="trade_date"),
+    session: Session = Depends(get_session),
+    client: MoexClient = Depends(get_moex),
+) -> dict[str, Any]:
+    try:
+        return cds_service.cds_detail(
+            session, client, issuer_id, rate_curve_id, on or date.today(), tenor_months
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.get("/")

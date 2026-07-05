@@ -119,4 +119,17 @@ class RateCurve(Base):
     quotes_json: Mapped[str | None] = mapped_column(default=None)
     max_adjustment_bps: Mapped[float | None] = mapped_column(default=None)
     average_adjustment_bps: Mapped[float | None] = mapped_column(default=None)
+    updated_at: Mapped[datetime] = mapped_column(default=_now, onupdate=_now)
     created_at: Mapped[datetime] = mapped_column(default=_now)
+
+
+class CdsPriceCache(Base):
+    __tablename__ = "cds_price_cache"
+    __table_args__ = (UniqueConstraint("rate_curve_id", "issuer_id", "trade_date"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    rate_curve_id: Mapped[int] = mapped_column(ForeignKey("rate_curves.id", ondelete="CASCADE"))
+    issuer_id: Mapped[int] = mapped_column(ForeignKey("issuers.id", ondelete="CASCADE"))
+    trade_date: Mapped[date]
+    results_json: Mapped[str] = mapped_column(default="[]")
+    cached_at: Mapped[datetime] = mapped_column(default=_now)

@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import json
+from datetime import date, datetime
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.backend import moex
-from app.backend.models import Bond, BondCashflow, Issuer, MarketData, RateCurve
+from app.backend.models import Bond, BondCashflow, CdsPriceCache, Issuer, MarketData, RateCurve
 from cdslib import Bond as QuantBond
 from cdslib import CurvePoint, ZeroCurve
 
@@ -309,6 +310,71 @@ def delete_rate_curve(session: Session, curve_id: int) -> None:
     if record is not None:
         session.delete(record)
         session.commit()
+
+
+# --- CDS pricing cache ----------------------------------------------------
+
+
+def latest_credit_change(session: Session, issuer_id: int) -> datetime:
+    """Return the most recent change timestamp across an issuer's bonds and their market data."""
+
+    stmt = select(func.max(Bond.created_at)).where(Bond.issuer_id == issuer_id)
+    max_bond = session.scalar(stmt)
+    stmt_md = select(func.max(MarketData.fetched_at)).where(
+        MarketData.bond_isin.in_(
+            select(Bond.isin).where(Bond.issuer_id == issuer_id)
+        )
+    )
+    max_md = session.scalar(stmt_md)
+    candidates = [datetime(2000, 1, 1)]
+    if max_bond is not None:
+        candidates.append(max_bond.replace(tzinfo=None) if getattr(max_bond, 'tzinfo', None) else max_bond)
+    if max_md is not None:
+        candidates.append(max_md.replace(tzinfo=None) if getattr(max_md, 'tzinfo', None) else max_md)
+
+    return max(candidates)
+
+
+def get_cds_cache(
+    session: Session, rate_curve_id: int, issuer_id: int, trade_date: date
+) -> str | None:
+    record = session.scalar(
+        select(CdsPriceCache).where(
+            CdsPriceCache.rate_curve_id == rate_curve_id,
+            CdsPriceCache.issuer_id == issuer_id,
+            CdsPriceCache.trade_date == trade_date,
+        )
+    )
+    return record.results_json if record is not None else None
+
+
+def set_cds_cache(
+    session: Session,
+    rate_curve_id: int,
+    issuer_id: int,
+    trade_date: date,
+    results_json: str,
+) -> CdsPriceCache:
+    record = session.scalar(
+        select(CdsPriceCache).where(
+            CdsPriceCache.rate_curve_id == rate_curve_id,
+            CdsPriceCache.issuer_id == issuer_id,
+            CdsPriceCache.trade_date == trade_date,
+        )
+    )
+    if record is None:
+        record = CdsPriceCache(
+            rate_curve_id=rate_curve_id,
+            issuer_id=issuer_id,
+            trade_date=trade_date,
+            results_json=results_json,
+        )
+        session.add(record)
+    else:
+        record.results_json = results_json
+    session.commit()
+    session.refresh(record)
+    return record
 
 
 def to_zero_curve(record: RateCurve) -> ZeroCurve:

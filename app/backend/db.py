@@ -41,6 +41,11 @@ def create_session_factory(url: str) -> sessionmaker[Session]:
         "market_data",
         {"override_clean": "FLOAT", "included": "BOOLEAN DEFAULT 1"},
     )
+    _ensure_columns(
+        engine,
+        "rate_curves",
+        {"updated_at": "TIMESTAMP"},
+    )
     return sessionmaker(bind=engine, expire_on_commit=False)
 
 
