@@ -27,14 +27,23 @@ from cdslib import (
 _STANDARD_TENORS = {6, 12, 24, 36, 60, 84, 120}  # months
 _MAX_TENOR = 10  # years
 
-_calendar: HolidayCalendar | None = None
+_json_calendar: HolidayCalendar | None = None
 
 
-def _get_calendar() -> HolidayCalendar:
-    global _calendar
-    if _calendar is None:
-        _calendar = CalendarRegistry.load_default().get("RUB")
-    return _calendar
+def _get_calendar(session: Session | None = None) -> HolidayCalendar:
+    """Return the default CDS calendar from DB, or fall back to JSON."""
+    if session is not None:
+        from app.backend.repositories import build_holiday_calendar_for_code, get_default_calendar_code
+
+        code = get_default_calendar_code(session, for_cds=True)
+        if code is not None:
+            cal = build_holiday_calendar_for_code(session, code)
+            if cal is not None:
+                return cal  # type: ignore[return-value]
+    global _json_calendar
+    if _json_calendar is None:
+        _json_calendar = CalendarRegistry.load_default().get("RUB")
+    return _json_calendar
 
 
 def _stale(
@@ -71,7 +80,7 @@ def price_all_cds(
         raise KeyError(f"Unknown rate curve {rate_curve_id}")
     discount = repositories.to_zero_curve(record)
     base = discount.base_date
-    calendar = _get_calendar()
+    calendar = _get_calendar(session)
 
     issuer_ids: list[int]
     if issuer_id is not None:
@@ -171,7 +180,7 @@ def cds_detail(
     survival = ctx.result.curve
     recovery = ctx.recovery
 
-    schedule = generate_cds_schedule(base, tenor_months, _get_calendar())
+    schedule = generate_cds_schedule(base, tenor_months, _get_calendar(session))
     result = price_cds(schedule, discount, survival, recovery)
     breakdown = cds_breakdown(schedule, discount, survival, recovery)
 

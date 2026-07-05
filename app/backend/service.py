@@ -4,10 +4,35 @@ import math
 from datetime import date, timedelta
 from typing import Any
 
-from app.backend.schemas import QuoteIn
-from cdslib import BootstrapResult, OISGenerator, OISQuote, bootstrap
+from sqlalchemy.orm import Session
 
-_generator = OISGenerator.load_default()
+from app.backend.schemas import QuoteIn
+from cdslib import (
+    BootstrapResult,
+    CalendarRegistry,
+    OISGenerator,
+    OISQuote,
+    RateIndexRegistry,
+    bootstrap,
+)
+
+_generator: OISGenerator | None = None
+
+
+def _get_generator(session: Session | None = None) -> OISGenerator:
+    global _generator
+    if session is not None:
+        from app.backend.repositories import build_calendar_mapping, build_rate_index_mapping
+
+        rates = build_rate_index_mapping(session)
+        holidays = build_calendar_mapping(session)
+        return OISGenerator(
+            RateIndexRegistry.from_mapping(rates),
+            CalendarRegistry.from_mapping(holidays),
+        )
+    if _generator is None:
+        _generator = OISGenerator.load_default()
+    return _generator
 
 
 def _to_quotes(items: list[QuoteIn]) -> list[OISQuote]:
@@ -15,14 +40,18 @@ def _to_quotes(items: list[QuoteIn]) -> list[OISQuote]:
 
 
 def compute(
-    items: list[QuoteIn], trade_date: date | None, max_adjustment_bps: float
+    items: list[QuoteIn],
+    trade_date: date | None,
+    max_adjustment_bps: float,
+    generator: OISGenerator | None = None,
 ) -> BootstrapResult:
     """Run the OIS bootstrap and return the raw cdslib result."""
     trade = trade_date or date.today()
+    gen = generator or _get_generator()
     return bootstrap(
         _to_quotes(items),
         trade,
-        generator=_generator,
+        generator=gen,
         max_avg_adjustment_bps=max_adjustment_bps,
     )
 
@@ -37,12 +66,15 @@ def zcyc_dict(result: BootstrapResult) -> dict[str, float]:
     }
 
 
-def preview(items: list[QuoteIn], trade_date: date | None) -> dict[str, Any]:
+def preview(
+    items: list[QuoteIn], trade_date: date | None, generator: OISGenerator | None = None
+) -> dict[str, Any]:
     """Par-rate preview: each quote's maturity plus its bid/ask/mid."""
     trade = trade_date or date.today()
+    gen = generator or _get_generator()
     rows: list[dict[str, Any]] = []
     for quote in _to_quotes(items):
-        swap = _generator.generate(quote.rate_index, quote.tenor, trade)
+        swap = gen.generate(quote.rate_index, quote.tenor, trade)
         years = (swap.maturity_date - swap.spot_date).days / 365.0
         rows.append(
             {
@@ -79,13 +111,17 @@ def _forward_curve(
 
 
 def run_bootstrap(
-    items: list[QuoteIn], trade_date: date | None, max_adjustment_bps: float
+    items: list[QuoteIn],
+    trade_date: date | None,
+    max_adjustment_bps: float,
+    generator: OISGenerator | None = None,
 ) -> dict[str, Any]:
     """Bootstrap the curve and package everything the UI needs."""
-    result = compute(items, trade_date, max_adjustment_bps)
+    result = compute(items, trade_date, max_adjustment_bps, generator)
     trade = result.trade_date
     quotes = _to_quotes(items)
     spot = result.spot_date
+    gen = generator or _get_generator()
 
     curve: list[dict[str, Any]] = []
     for point in result.points:
@@ -107,7 +143,7 @@ def run_bootstrap(
 
     fits: list[dict[str, Any]] = []
     for quote, fit in zip(quotes, result.fits, strict=True):
-        swap = _generator.generate(quote.rate_index, quote.tenor, trade)
+        swap = gen.generate(quote.rate_index, quote.tenor, trade)
         years = (swap.maturity_date - spot).days / 365.0
         fits.append(
             {

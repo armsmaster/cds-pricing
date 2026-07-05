@@ -60,18 +60,24 @@ async def no_cache_static(
 
 
 @app.post("/api/quotes")
-def quotes(request: QuotesRequest) -> dict[str, Any]:
+def quotes(
+    request: QuotesRequest, session: Session = Depends(get_session)
+) -> dict[str, Any]:
     try:
-        return service.preview(request.quotes, request.trade_date)
+        gen = service._get_generator(session)
+        return service.preview(request.quotes, request.trade_date, gen)
     except (KeyError, ValueError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.post("/api/bootstrap")
-def bootstrap_endpoint(request: BootstrapRequest) -> dict[str, Any]:
+def bootstrap_endpoint(
+    request: BootstrapRequest, session: Session = Depends(get_session)
+) -> dict[str, Any]:
     try:
+        gen = service._get_generator(session)
         return service.run_bootstrap(
-            request.quotes, request.trade_date, request.max_adjustment_bps
+            request.quotes, request.trade_date, request.max_adjustment_bps, gen
         )
     except (KeyError, ValueError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

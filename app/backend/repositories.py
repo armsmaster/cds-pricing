@@ -509,3 +509,55 @@ def delete_holiday(session: Session, holiday_id: int) -> None:
     if record is not None:
         session.delete(record)
         session.commit()
+
+
+# --- registry builders --------------------------------------------------
+
+
+def build_rate_index_mapping(session: Session) -> dict[str, dict[str, object]]:
+    """Return a dict mirroring rate_indices.json, built from DB rows."""
+    result: dict[str, dict[str, object]] = {}
+    for ri in list_rate_indices(session):
+        result[ri.name] = {
+            "currency": ri.currency,
+            "day_count": ri.day_count,
+            "spot_lag": ri.spot_lag,
+            "payment_lag": ri.payment_lag,
+            "fixed_frequency": ri.fixed_frequency,
+            "business_day_convention": ri.business_day_convention,
+        }
+    return result
+
+
+def build_calendar_mapping(session: Session) -> dict[str, list[str]]:
+    """Return a dict mirroring holidays.json (currency → list of dates), built from all
+    calendars combined per currency."""
+    result: dict[str, list[str]] = {}
+    for cal in list_calendars(session):
+        cur = cal.currency
+        dates = [h.date.isoformat() for h in cal.dates]
+        result.setdefault(cur, []).extend(dates)
+    return result
+
+
+def get_default_calendar_code(
+    session: Session, *, for_cds: bool = False, for_ois: bool = False
+) -> str | None:
+    column = (
+        CalendarRegistryModel.is_default_for_cds
+        if for_cds
+        else CalendarRegistryModel.is_default_for_ois
+    )
+    cal = session.scalar(select(CalendarRegistryModel).where(column))
+    return cal.code if cal else None
+
+
+def build_holiday_calendar_for_code(session: Session, code: str) -> object | None:
+    """Return a cdslib.HolidayCalendar for a named calendar."""
+    from cdslib import HolidayCalendar as HLCal
+
+    cal = session.scalar(select(CalendarRegistryModel).where(CalendarRegistryModel.code == code))
+    if cal is None:
+        return None
+    dates = frozenset(h.date for h in cal.dates)
+    return HLCal(cal.currency, dates)
