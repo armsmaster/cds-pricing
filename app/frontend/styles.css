@@ -468,6 +468,30 @@ td.rcell { text-align: right; white-space: nowrap; }
 .hint { color: var(--muted); font-size: 12px; margin: 8px 0 0; }
 .hint code { background: var(--panel-2); padding: 1px 5px; border-radius: 4px; border: 1px solid var(--border-soft); font-size: 11.5px; }
 
+/* CDS table + accordion detail --------------------------------------- */
+#cds-table tbody tr { cursor: pointer; }
+#cds-table tbody tr.expanded { background: rgba(56, 189, 248, 0.08); }
+tr.cds-detail td { padding: 0; border-bottom: none; }
+tr.cds-detail .detail-card {
+  padding: 10px 16px 14px;
+  border-top: 1px solid var(--border-soft);
+  border-bottom: 2px solid var(--accent);
+  background: rgba(56, 189, 248, 0.04);
+}
+tr.cds-detail h4 { font-size: 13px; margin: 0 0 6px; color: var(--accent); }
+tr.cds-detail table { margin-bottom: 8px; }
+tr.cds-detail .leg-summary { color: var(--muted); font-size: 12px; line-height: 1.7; }
+tr.cds-detail .leg-summary b { color: var(--text); }
+
+.checkbox-label {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text);
+}
+
 @media (max-width: 900px) {
   main { grid-template-columns: 1fr; }
   .controls { position: static; }

@@ -328,9 +328,13 @@ def latest_credit_change(session: Session, issuer_id: int) -> datetime:
     max_md = session.scalar(stmt_md)
     candidates = [datetime(2000, 1, 1)]
     if max_bond is not None:
-        candidates.append(max_bond.replace(tzinfo=None) if getattr(max_bond, 'tzinfo', None) else max_bond)
+        candidates.append(
+            max_bond.replace(tzinfo=None) if getattr(max_bond, "tzinfo", None) else max_bond
+        )
     if max_md is not None:
-        candidates.append(max_md.replace(tzinfo=None) if getattr(max_md, 'tzinfo', None) else max_md)
+        candidates.append(
+            max_md.replace(tzinfo=None) if getattr(max_md, "tzinfo", None) else max_md
+        )
 
     return max(candidates)
 

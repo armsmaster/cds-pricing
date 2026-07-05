@@ -75,6 +75,13 @@ const HELP = {
   pricestable: "Prices fed to the bootstrap. Edit the clean price (% of nominal) to " +
     "override the MOEX-fetched value, or untick Include to drop a bond. Changes are saved " +
     "per trade date; Refresh re-pulls from MOEX while keeping your overrides.",
+  cdsratecurve: "Saved risk-free (RUONIA) curve used for CDS discounting. Save one on the " +
+    "Rate curve tab first.",
+  cdsfilter: "Filter results by issuer (Ctrl/Cmd-click for multiple) and show only " +
+    "standard CDS tenors. Click a row to see the full pricing breakdown.",
+  cdsresults: "CDS contracts priced on a quarterly IMM schedule from the selected rate " +
+    "curve and each issuer's credit curve. Par spreads, upfronts, dv01 and credit dv01. " +
+    "Click a row to expand the cashflow-level pricing detail.",
 };
 
 let currentHelpBtn = null;
@@ -361,11 +368,13 @@ function resizeCharts(root) {
 function activateView(name) {
   el("view-rate").hidden = name !== "rate";
   el("view-credit").hidden = name !== "credit";
+  el("view-cds").hidden = name !== "cds";
   document.querySelectorAll(".tab").forEach((t) =>
     t.classList.toggle("active", t.dataset.view === name)
   );
-  resizeCharts(name === "rate" ? el("view-rate") : el("view-credit"));
+  resizeCharts(document.querySelector("main:not([hidden]) .results") || document.body);
   if (name === "credit" && typeof onCreditShown === "function") onCreditShown();
+  if (name === "cds" && typeof onCdsShown === "function") onCdsShown();
 }
 
 async function saveRateCurve() {

@@ -17,6 +17,7 @@
   <nav class="tabs" role="tablist">
     <button id="tab-rate" class="tab active" type="button" data-view="rate" role="tab">Rate curve</button>
     <button id="tab-credit" class="tab" type="button" data-view="credit" role="tab">Credit curves</button>
+    <button id="tab-cds" class="tab" type="button" data-view="cds" role="tab">CDS Pricing</button>
   </nav>
 
   <!-- ============================ RATE VIEW ============================ -->
@@ -263,6 +264,65 @@
     </section>
   </main>
 
+  <!-- =========================== CDS PRICING VIEW =========================== -->
+  <main id="view-cds" hidden>
+    <aside class="controls">
+      <div class="group-title">Parameters</div>
+      <label>Trade date
+        <input type="date" id="cds-trade-date" />
+      </label>
+
+      <label>
+        <span class="label-row">Rate curve
+          <button class="help" type="button" data-help="cdsratecurve" aria-label="About the rate curve" aria-expanded="false">?</button>
+        </span>
+        <select id="cds-rate-curve"></select>
+      </label>
+
+      <div class="group-title">Filters</div>
+      <label>
+        <span class="label-row">Issuer
+          <button class="help" type="button" data-help="cdsfilter" aria-label="About filters" aria-expanded="false">?</button>
+        </span>
+        <select id="cds-issuer-filter" multiple>
+          <option value="">All</option>
+        </select>
+      </label>
+      <label class="checkbox-label">
+        <input type="checkbox" id="cds-standard-only" />
+        Standard tenors only
+      </label>
+
+      <button id="cds-refresh" class="btn-primary">Price CDS</button>
+      <div id="cds-status" class="status" role="status" aria-live="polite"></div>
+    </aside>
+
+    <section class="results">
+      <div id="cds-empty" class="empty-state">
+        Select a saved rate curve and press Price CDS.
+      </div>
+
+      <div class="card full" id="cds-results-card" hidden>
+        <div class="card-head">
+          <h2>CDS pricing results</h2>
+          <button class="help" type="button" data-help="cdsresults" aria-label="About the results" aria-expanded="false">?</button>
+        </div>
+        <div class="table-wrap">
+          <table id="cds-table">
+            <thead>
+              <tr>
+                <th>Issuer</th><th>Tenor</th><th>Expiry</th>
+                <th>Par spread</th><th>Upfront</th><th>Rebate</th>
+                <th>Net premium</th><th>DV01</th><th>Credit DV01</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
   <div id="popover" class="popover" role="tooltip" hidden></div>
 
   <div id="guide-overlay" class="modal-overlay" hidden>
@@ -316,5 +376,6 @@
 
   <script src="app.js"></script>
   <script src="credit.js"></script>
+  <script src="cds.js"></script>
 </body>
 </html>
