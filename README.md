@@ -4,12 +4,14 @@ Tools for **CDS-related curve construction**, built around a small, well-tested
 Python library and an interactive web app.
 
 - **`cdslib`** — a minimal library for term-structure tooling, generic OIS
-  instruments, smoothing OIS curve bootstrapping, and reduced-form bond pricing /
-  issuer credit-curve (hazard) bootstrapping.
-- **`app/`** — a FastAPI + Plotly web app with two tools: bootstrap a zero-coupon
-  yield curve from OIS quotes, and bootstrap an issuer **credit (hazard) curve**
-  from its bond prices (fetched from MOEX ISS). State persists in SQLite. See the
-  **[app guide](app/README.md)** and **[deployment guide](DEPLOY.md)**.
+  instruments, smoothing OIS curve bootstrapping, reduced-form bond pricing /
+  issuer credit-curve (hazard) bootstrapping, and ISDA‑standard CDS pricing.
+- **`app/`** — a FastAPI + Plotly web app with three tools: bootstrap a
+  zero-coupon yield curve from OIS quotes, bootstrap an issuer **credit
+  (hazard) curve** from its bond prices, and price standardised **CDS
+  contracts** against stored curves (fetched from MOEX ISS). State persists
+  in SQLite. See the **[app guide](app/README.md)** and
+  **[deployment guide](DEPLOY.md)**.
 
 The initial focus is the **RUONIA / RUB** market, but rate indices, conventions,
 and holidays are data-driven and easy to extend.
@@ -31,7 +33,8 @@ src/cdslib/          # the library
   survival.py        # SurvivalCurve (piecewise-constant hazard)
   bond.py            # bond cashflows + reduced-form dirty price
   credit_bootstrap.py # issuer credit-curve bootstrap from bond prices
-  data/              # rate_indices.json, holidays.json
+  cds.py              # CDS schedule generator + ISDA pricing + DV01
+  data/               # rate_indices.json, holidays.json, moex_calendar.json
 app/                 # web app (FastAPI backend + Plotly frontend, SQLite)
 notebooks/           # demo notebooks (generators, bootstrap)
 tests/               # pytest suite

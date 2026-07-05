@@ -336,10 +336,12 @@
         <button id="close-guide" class="modal-close" type="button" aria-label="Close guide">&times;</button>
       </div>
       <div class="modal-body">
-        <p>Two tools, switched with the tabs at the top:</p>
+        <p>Three tools, switched with the tabs at the top:</p>
         <ul>
           <li><strong>Rate curve</strong> &mdash; bootstrap a RUONIA zero-coupon curve from OIS bid/ask quotes.</li>
           <li><strong>Credit curves</strong> &mdash; bootstrap an issuer's hazard-rate curve from its bond prices.</li>
+          <li><strong>CDS Pricing</strong> &mdash; price standardised CDS contracts (100 bp fixed coupon,
+            quarterly IMM schedule) against stored rate and credit curves.</li>
         </ul>
 
         <h3>Rate curve</h3>
@@ -348,7 +350,8 @@
             <code>{ "rate", "tenor", "bid", "ask" }</code>, bid/ask in %). The par chart previews live.</li>
           <li>Set the <strong>max adjustment</strong> cap and press <strong>Calculate</strong>
             (<kbd>Ctrl</kbd>/<kbd>Cmd</kbd>+<kbd>Enter</kbd>).</li>
-          <li>Press <strong>Save curve for credit use</strong> to store it &mdash; credit curves discount off a saved rate curve.</li>
+          <li>Press <strong>Save curve for credit use</strong> to store it &mdash; both credit curves and
+            CDS pricing discount off a saved rate curve.</li>
         </ol>
         <p>The fit is reliability-weighted (by bid/ask spread) with a forward-slope smoothness
           penalty capped at the average adjustment.</p>
@@ -368,11 +371,34 @@
           bootstrapped so model dirty prices match the market. <strong>Download Excel</strong> on the
           repricing table exports a macro-free workbook that rebuilds each model price with live formulas.</p>
 
+        <h3>CDS Pricing</h3>
+        <ol>
+          <li>Pick a <strong>trade date</strong> and a saved <strong>rate curve</strong>. The system fetches
+            the stored rate and credit curves for all issuers with bond data.</li>
+          <li>Filter by <strong>issuer</strong> (<kbd>Ctrl</kbd>/<kbd>Cmd</kbd>-click for multiple)
+            or toggle <strong>Standard tenors only</strong> (6m, 1y, 2y, 3y, 5y, 7y, 10y).</li>
+          <li>Press <strong>Price CDS</strong>. The results table shows all quarterly contracts from 3m
+            up to the credit curve's horizon. Results are <strong>cached</strong> per trade date and
+            auto-invalidated when the underlying curves change.</li>
+          <li><strong>Click any row</strong> to expand an inline detail panel with the full pricing
+            breakdown: pricing summary (legs, RPV01, recovery), interest-rate and hazard-rate
+            charts, per-period cashflows (DF, Q, premium PV, protection PV), and DV01/CDV01.</li>
+          <li>Download the results table or a per-contract detail breakdown as Excel via the
+            <strong>Download Excel</strong> / <strong>Download detail</strong> buttons.</li>
+        </ol>
+        <p>The ISDA-standard model prices each CDS with a 100 bp fixed coupon on quarterly IMM dates
+          (20 Mar/Jun/Sep/Dec). The upfront compensates for the difference between the fixed coupon
+          and the market par spread; the rebate covers the pre-trade accrued fraction. Premium leg
+          accounts for accrued-at-default (half the quarterly coupon on average). Sensitivity is
+          measured by DV01 (1 bp rate bump) and Credit DV01 (1 bp hazard bump).</p>
+
         <h3>Notes</h3>
         <ul>
           <li>Shipped indices: <code>RUONIA</code> (RUB), <code>SOFR</code> (USD). Bonds are RUB.</li>
           <li>Holidays are seeded for <strong>2024&ndash;2026</strong>; outside that range a weekend-only calendar is used.</li>
           <li>Bonds with no usable price on the trade date are skipped and listed under the table.</li>
+          <li>CDS results are cached per (rate curve, issuer, trade date). They auto-refresh when the
+            rate curve or the issuer's bond data changes. Press <strong>Price CDS</strong> again to force a refresh.</li>
         </ul>
       </div>
     </div>

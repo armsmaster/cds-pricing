@@ -1,11 +1,14 @@
-# OIS & Credit Curves — App Guide
+# OIS, Credit & CDS Curves — App Guide
 
-An interactive web app with two tools, switched by the top-nav tabs:
+An interactive web app with three tools, switched by the top-nav tabs:
 
 - **Rate curve** — build a **zero-coupon (ZC) yield curve** from overnight-index-swap
   (OIS) bid/ask quotes; preview par rates live, bootstrap a smooth curve, export JSON.
 - **Credit curves** — build an issuer **hazard-rate / survival curve** from its bond
   prices (fetched from MOEX ISS), discounting off a saved rate curve.
+- **CDS Pricing** — price standardised CDS contracts (100 bp fixed coupon, quarterly
+  IMM schedule, ISDA standard model) against stored rate and credit curves. Explore
+  the full pricing breakdown with interest-rate and hazard-rate charts per contract.
 
 It is a thin **FastAPI** backend over the [`cdslib`](../README.md) library plus a
 single-page **Plotly** frontend (no build step). State (issuers, bonds, saved rate
@@ -327,3 +330,69 @@ penalty (strength chosen at the L-curve knee) that keeps the instantaneous hazar
 | `GET /api/moex/search?q=` | MOEX security search. |
 | `GET /api/bonds/{isin}/marketdata?date=` | Fetch + cache a bond's price. |
 | `POST /api/credit-curve` `{ issuer_id, rate_curve_id, trade_date }` | Bootstrap the credit curve → hazard/survival grid, per-bond fits, skipped bonds, hazard export. |
+
+---
+
+## 11. CDS Pricing (standardised contracts)
+
+The **CDS Pricing** tab prices standardised credit default swaps for every issuer
+that has stored bond data. It reuses the saved rate curves (for discounting) and
+the issuer credit curves (for default probability) built on the other two tabs.
+
+### Prerequisites
+
+- A **saved rate curve** (from the Rate curve tab).
+- At least one **issuer with bonds + credit data** (from the Credit curves tab).
+
+### Workflow
+
+1. Pick a **trade date** and a saved **rate curve**.
+2. Optionally filter by **issuer** (multi-select) or toggle **Standard tenors
+   only** (6m, 1y, 2y, 3y, 5y, 7y, 10y).
+3. Press **Price CDS**. All quarterly contracts from 3m up to the furthest
+   credit-curve date are priced and displayed.
+4. Click any row to expand an inline **detail panel** with:
+   - **Pricing summary:** legs, RPV01, recovery rate, base date.
+   - **Interest rate chart** (the fitted ZeroCurve) and **hazard rate chart**
+     (the instantaneous default intensity) — two small Plotly charts.
+   - **Per-period cashflow table** (date, Δ, DF, Q, premium PV, protection PV).
+   - **Leg summary:** par spread, upfront, rebate, net premium, DV01, Credit DV01.
+5. Download the results table or a per-contract detail as Excel via the
+   **Download Excel / Download detail** buttons.
+
+### Contract specification
+
+Each CDS follows the ISDA standard model:
+
+| Parameter | Value |
+|---|---|
+| Fixed coupon | 100 bp per annum |
+| Coupon dates | 20 Mar / Jun / Sep / Dec (IMM) |
+| Frequency | Quarterly |
+| Day count | ACT/ACT ISDA |
+| Business day | Modified Following (Moscow Exchange calendar) |
+| Effective date | Trade date + 1 business day |
+| Rebate | Accrued stub from the previous IMM to the trade date |
+| Upfront | (Par spread − Fixed coupon) × RPV01 |
+| Net premium (buyer pays) | Upfront − Rebate |
+
+### Methodology
+
+Reduced-form ISDA pricing. For each issuer the app bootstraps its credit curve
+from stored bond prices, then generates CDS contracts for every quarterly tenor
+(3m, 6m, …, up to the furthest credit-curve node). Premium payments are
+discounted and survival-weighted with accrued-at-default (the buyer owes half the
+quarterly coupon on average if default occurs mid-period). Sensitivity is
+measured by DV01 (1 bp rate bump) and Credit DV01 (1 bp hazard bump).
+
+Results are **cached** per (rate curve, issuer, trade date) and
+**auto-invalidated** when the rate curve or the issuer's bond data changes.
+
+### CDS API
+
+| Method & path | Purpose |
+|---|---|
+| `GET /api/cds-pricing?rate_curve_id=[&issuer_id=][&trade_date=][&refresh]` | Price all CDS contracts; `refresh=true` forces recompute. |
+| `GET /api/cds-pricing/{issuer_id}/{tenor_months}/breakdown?rate_curve_id=[&trade_date=]` | Full pricing breakdown for one contract. |
+| `GET /api/cds-pricing.xlsx?rate_curve_id=[&issuer_id=][&trade_date=]` | Download results table as Excel. |
+| `GET /api/cds-pricing/{issuer_id}/{tenor_months}/breakdown.xlsx?rate_curve_id=[&trade_date=]` | Download contract detail breakdown as Excel. |
