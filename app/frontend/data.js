@@ -2,12 +2,16 @@
 
 // Reuses globals from app.js: el, apiFetch, escapeHtml, wireSegmented, chip.
 
-const dataState = { mode: "rates", selectedCalendarId: null };
+const dataState = { mode: "rates", selectedCalendarId: null, riEditId: null };
 
 function dataStatus(message, kind) {
   const node = el("data-status");
   node.textContent = message || "";
   node.className = "status" + (kind ? " " + kind : "");
+}
+
+function updateAddButton() {
+  el("data-add").textContent = dataState.mode === "rates" ? "Add rate index" : "Add calendar";
 }
 
 function renderDataSummary(rateCount, calCount) {
@@ -17,6 +21,10 @@ function renderDataSummary(rateCount, calCount) {
   ].join("");
 }
 
+function emptyTd(colspan, message) {
+  return '<tr><td class="data-empty" colspan="' + colspan + '">' + message + "</td></tr>";
+}
+
 // --- rate indices ----------------------------------------------------------
 
 async function loadRateIndices() {
@@ -24,6 +32,10 @@ async function loadRateIndices() {
   const calCount = (await apiFetch("GET", "/api/data/calendars")).length;
   renderDataSummary(indices.length, calCount);
   const tbody = el("rates-table").querySelector("tbody");
+  if (!indices.length) {
+    tbody.innerHTML = emptyTd(8, "No rate indices yet. Add one to get started.");
+    return;
+  }
   tbody.innerHTML = indices
     .map(
       (r) =>
@@ -41,7 +53,7 @@ async function loadRateIndices() {
   tbody.querySelectorAll(".ri-row").forEach((tr) =>
     tr.addEventListener("click", (e) => {
       if (e.target.closest(".bond-del")) return;
-      openRiModal(parseInt(tr.dataset.id), indices);
+      openRiModal(indices.find((r) => r.id === parseInt(tr.dataset.id)));
     })
   );
   tbody.querySelectorAll(".bond-del").forEach((btn) =>
@@ -60,67 +72,96 @@ async function deleteRateIndex(id) {
   }
 }
 
-async function addRateIndex() {
-  const name = el("ri-name").value.trim();
-  if (!name) return;
-  try {
-    await apiFetch("POST", "/api/data/rate-indices", {
-      name,
-      currency: el("ri-currency").value,
-      day_count: el("ri-dc").value,
-      spot_lag: parseInt(el("ri-spot").value) || 0,
-      payment_lag: parseInt(el("ri-pay").value) || 0,
-      fixed_frequency: el("ri-freq").value,
-      business_day_convention: el("ri-bdc").value,
-    });
-    el("ri-name").value = "";
-    await loadRateIndices();
-    dataStatus("Added", "ok");
-  } catch (err) {
-    dataStatus(err.message, "error");
+// --- rate index modal (dual-mode: create when riEditId is null, otherwise edit) ---
+
+function openRiModal(ri) {
+  if (ri) {
+    dataState.riEditId = ri.id;
+    el("ri-edit-name").value = ri.name;
+    el("ri-edit-currency").value = ri.currency;
+    el("ri-edit-dc").value = ri.day_count;
+    el("ri-edit-spot").value = ri.spot_lag;
+    el("ri-edit-pay").value = ri.payment_lag;
+    el("ri-edit-freq").value = ri.fixed_frequency;
+    el("ri-edit-bdc").value = ri.business_day_convention;
+    el("ri-save").textContent = "Save";
+  } else {
+    dataState.riEditId = null;
+    el("ri-edit-name").value = "";
+    el("ri-edit-currency").value = "";
+    el("ri-edit-dc").value = "ACT/365F";
+    el("ri-edit-spot").value = 0;
+    el("ri-edit-pay").value = 0;
+    el("ri-edit-freq").value = "1Y";
+    el("ri-edit-bdc").value = "MODIFIED_FOLLOWING";
+    el("ri-save").textContent = "Add rate index";
   }
-}
-
-// --- rate index modal -------------------------------------------------------
-
-function openRiModal(id, indices) {
-  const ri = indices.find((r) => r.id === id);
-  if (!ri) return;
-  el("ri-edit-id").value = ri.id;
-  el("ri-edit-name").value = ri.name;
-  el("ri-edit-currency").value = ri.currency;
-  el("ri-edit-dc").value = ri.day_count;
-  el("ri-edit-spot").value = ri.spot_lag;
-  el("ri-edit-pay").value = ri.payment_lag;
-  el("ri-edit-freq").value = ri.fixed_frequency;
-  el("ri-edit-bdc").value = ri.business_day_convention;
   el("ri-modal").hidden = false;
   el("ri-edit-name").focus();
   el("ri-modal-status").textContent = "";
   el("ri-modal-status").className = "status";
 }
 
-function closeRiModal() {
-  el("ri-modal").hidden = true;
-}
+function closeRiModal() { el("ri-modal").hidden = true; }
 
 async function saveRiModal() {
-  const id = el("ri-edit-id").value;
+  const payload = {
+    name: el("ri-edit-name").value,
+    currency: el("ri-edit-currency").value,
+    day_count: el("ri-edit-dc").value,
+    spot_lag: parseInt(el("ri-edit-spot").value) || 0,
+    payment_lag: parseInt(el("ri-edit-pay").value) || 0,
+    fixed_frequency: el("ri-edit-freq").value,
+    business_day_convention: el("ri-edit-bdc").value,
+  };
   try {
-    const updated = await apiFetch("PATCH", "/api/data/rate-indices/" + id, {
-      name: el("ri-edit-name").value,
-      currency: el("ri-edit-currency").value,
-      day_count: el("ri-edit-dc").value,
-      spot_lag: parseInt(el("ri-edit-spot").value) || 0,
-      payment_lag: parseInt(el("ri-edit-pay").value) || 0,
-      fixed_frequency: el("ri-edit-freq").value,
-      business_day_convention: el("ri-edit-bdc").value,
-    });
+    if (dataState.riEditId) {
+      await apiFetch("PATCH", "/api/data/rate-indices/" + dataState.riEditId, payload);
+    } else {
+      await apiFetch("POST", "/api/data/rate-indices", payload);
+    }
     closeRiModal();
     await loadRateIndices();
-    dataStatus("Saved: " + updated.name, "ok");
+    dataStatus("Saved", "ok");
   } catch (err) {
     const s = el("ri-modal-status");
+    s.textContent = err.message;
+    s.className = "status error";
+  }
+}
+
+// --- calendar modal ---------------------------------------------------------
+
+function openCalModal() {
+  el("cal-code").value = "";
+  el("cal-desc").value = "";
+  el("cal-currency").value = "";
+  el("cal-cds-def").checked = false;
+  el("cal-ois-def").checked = false;
+  el("cal-modal").hidden = false;
+  el("cal-code").focus();
+  el("cal-modal-status").textContent = "";
+  el("cal-modal-status").className = "status";
+}
+
+function closeCalModal() { el("cal-modal").hidden = true; }
+
+async function saveCalModal() {
+  const code = el("cal-code").value.trim();
+  if (!code) return;
+  try {
+    await apiFetch("POST", "/api/data/calendars", {
+      code,
+      description: el("cal-desc").value,
+      currency: el("cal-currency").value,
+      is_default_for_cds: el("cal-cds-def").checked,
+      is_default_for_ois: el("cal-ois-def").checked,
+    });
+    closeCalModal();
+    await loadCalendars();
+    dataStatus("Added", "ok");
+  } catch (err) {
+    const s = el("cal-modal-status");
     s.textContent = err.message;
     s.className = "status error";
   }
@@ -133,6 +174,10 @@ async function loadCalendars() {
   const riCount = (await apiFetch("GET", "/api/data/rate-indices")).length;
   renderDataSummary(riCount, calendars.length);
   const tbody = el("calendars-table").querySelector("tbody");
+  if (!calendars.length) {
+    tbody.innerHTML = emptyTd(7, "No calendars yet. Create one to manage holidays.");
+    return;
+  }
   tbody.innerHTML = calendars
     .map(
       (c) => {
@@ -169,14 +214,11 @@ async function loadCalendars() {
 }
 
 async function toggleCalendarFlag(id, field) {
-  const payload = {};
-  payload[field] = true;  // will toggle below
   try {
     const cal = await apiFetch("GET", "/api/data/calendars");
     const current = cal.find((c) => c.id === id);
     if (!current) return;
-    payload[field] = !current[field];
-    await apiFetch("PATCH", "/api/data/calendars/" + id, payload);
+    await apiFetch("PATCH", "/api/data/calendars/" + id, { [field]: !current[field] });
     await loadCalendars();
   } catch (err) {
     dataStatus(err.message, "error");
@@ -195,32 +237,13 @@ async function deleteCalendar(id) {
   }
 }
 
-async function addCalendar() {
-  const code = el("cal-code").value.trim();
-  if (!code) return;
-  try {
-    await apiFetch("POST", "/api/data/calendars", {
-      code,
-      description: el("cal-desc").value,
-      currency: el("cal-currency").value,
-      is_default_for_cds: el("cal-cds-def").checked,
-      is_default_for_ois: el("cal-ois-def").checked,
-    });
-    el("cal-code").value = "";
-    await loadCalendars();
-    dataStatus("Added", "ok");
-  } catch (err) {
-    dataStatus(err.message, "error");
-  }
-}
-
 // --- holiday editor ---------------------------------------------------------
 
 async function selectCalendar(id, code) {
   dataState.selectedCalendarId = id;
   el("holiday-editor").hidden = !id;
   if (!id) { el("holiday-list").innerHTML = ""; return; }
-  el("holiday-editor-title").textContent = "Holidays — " + (code || id);
+  el("holiday-editor-title").textContent = (code || id) + " — holidays";
   await loadHolidays();
 }
 
@@ -229,13 +252,15 @@ async function loadHolidays() {
   const holidays = await apiFetch(
     "GET", "/api/data/calendars/" + dataState.selectedCalendarId + "/holidays"
   );
-  el("holiday-list").innerHTML = holidays
-    .map(
-      (h) =>
-        '<div class="bond-row"><div class="bond-main">' + h.date +
-        '</div><button class="bond-del" data-id="' + h.id + '" type="button">&times;</button></div>'
-    )
-    .join("");
+  el("holiday-list").innerHTML = holidays.length
+    ? holidays
+        .map(
+          (h) =>
+            '<div class="bond-row"><div class="bond-main">' + h.date +
+            '</div><button class="bond-del" data-id="' + h.id + '" type="button">&times;</button></div>'
+        )
+        .join("")
+    : '<div class="data-empty">No dates yet. Add one or import a JSON list.</div>';
   el("holiday-list").querySelectorAll(".bond-del").forEach((btn) =>
     btn.addEventListener("click", () => deleteHoliday(btn.dataset.id))
   );
@@ -298,14 +323,17 @@ async function importDates() {
   dataStatus("Imported " + ok + (fail ? " (" + fail + " failed)" : ""), "ok");
 }
 
-// --- export -----------------------------------------------------------------
+// --- sidebar actions --------------------------------------------------------
 
-function exportRateIndices() {
-  window.location.href = "/api/data/rate-indices/export";
+function onDataAdd() {
+  if (dataState.mode === "rates") openRiModal(null);
+  else openCalModal();
 }
 
-function exportCalendar() {
-  if (dataState.selectedCalendarId) {
+function onDataExport() {
+  if (dataState.mode === "rates") {
+    window.location.href = "/api/data/rate-indices/export";
+  } else if (dataState.selectedCalendarId) {
     window.location.href = "/api/data/calendars/" + dataState.selectedCalendarId + "/export";
   } else {
     dataStatus("Select a calendar first", "error");
@@ -320,6 +348,7 @@ function setMode(mode) {
   el("holiday-editor").hidden = true;
   el("data-rates-card").hidden = mode !== "rates";
   el("data-calendars-card").hidden = mode !== "calendars";
+  updateAddButton();
   if (mode === "rates") loadRateIndices();
   else loadCalendars();
 }
@@ -328,23 +357,36 @@ function setMode(mode) {
 
 function initData() {
   wireSegmented("data-mode", setMode);
-  el("add-rate-index").addEventListener("click", addRateIndex);
-  el("add-calendar").addEventListener("click", addCalendar);
+  el("data-add").addEventListener("click", onDataAdd);
+  el("data-export").addEventListener("click", onDataExport);
   el("add-holiday").addEventListener("click", addHoliday);
+  el("holiday-close").addEventListener("click", () => selectCalendar(null));
   el("holiday-date").addEventListener("keydown", (e) => {
     if (e.key === "Enter") { e.preventDefault(); addHoliday(); }
   });
   el("import-dates-btn").addEventListener("click", importDates);
-  el("export-rate-indices").addEventListener("click", exportRateIndices);
-  el("export-calendar").addEventListener("click", exportCalendar);
+
+  // Rate index modal
   el("ri-save").addEventListener("click", saveRiModal);
   el("ri-close").addEventListener("click", closeRiModal);
   el("ri-modal").addEventListener("click", (e) => {
     if (e.target === el("ri-modal")) closeRiModal();
   });
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && !el("ri-modal").hidden) closeRiModal();
+
+  // Calendar modal
+  el("cal-save").addEventListener("click", saveCalModal);
+  el("cal-close").addEventListener("click", closeCalModal);
+  el("cal-modal").addEventListener("click", (e) => {
+    if (e.target === el("cal-modal")) closeCalModal();
   });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      if (!el("cal-modal").hidden) closeCalModal();
+      else if (!el("ri-modal").hidden) closeRiModal();
+    }
+  });
+
   setMode("rates");
 }
 

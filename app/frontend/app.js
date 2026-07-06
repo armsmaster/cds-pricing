@@ -82,6 +82,12 @@ const HELP = {
   cdsresults: "CDS contracts priced on a quarterly IMM schedule from the selected rate " +
     "curve and each issuer's credit curve. Par spreads, upfronts, dv01 and credit dv01. " +
     "Click a row to expand the cashflow-level pricing detail.",
+  datarates: "Overnight rate index conventions used by the Rate curve tab. Each entry " +
+    "defines the currency, day-count convention, spot/payment lags, fixed-leg frequency " +
+    "and business-day convention. Edit by clicking a row; add via the sidebar button.",
+  datacals: "Holiday calendars used for business-day rolling. Click a calendar code to " +
+    "expand its dates; toggle the CDS/OIS default flags by clicking the checkmark cells. " +
+    "Create calendars and manage dates via the sidebar and inline editor.",
 };
 
 let currentHelpBtn = null;

@@ -337,6 +337,8 @@
         <button type="button" data-mode="rates" class="active" aria-pressed="true">Rate indices</button>
         <button type="button" data-mode="calendars" aria-pressed="false">Calendars</button>
       </div>
+      <button id="data-add" class="btn-primary" type="button">Add</button>
+      <button id="data-export" class="btn-secondary" type="button">Export JSON</button>
       <div id="data-status" class="status" role="status" aria-live="polite"></div>
       <div id="data-summary" class="stats"></div>
     </aside>
@@ -346,9 +348,7 @@
       <div class="card full" id="data-rates-card">
         <div class="card-head">
           <h2>Rate indices</h2>
-          <div class="head-right">
-            <button id="export-rate-indices" class="btn-secondary" type="button">Export JSON</button>
-          </div>
+          <button class="help" type="button" data-help="datarates" aria-label="About rate indices" aria-expanded="false">?</button>
         </div>
         <div class="table-wrap">
           <table id="rates-table">
@@ -359,28 +359,13 @@
             <tbody></tbody>
           </table>
         </div>
-        <details class="new-issuer" style="margin-top:10px;padding-top:8px;">
-          <summary>Add rate index</summary>
-          <div class="data-form">
-            <label>Name<input type="text" id="ri-name" placeholder="e.g. SONIA" /></label>
-            <label>Currency<input type="text" id="ri-currency" placeholder="GBP" /></label>
-            <label>Day count<input type="text" id="ri-dc" value="ACT/365F" /></label>
-            <label>Spot lag<input type="number" id="ri-spot" value="0" /></label>
-            <label>Pay lag<input type="number" id="ri-pay" value="0" /></label>
-            <label>Fixed freq<input type="text" id="ri-freq" value="1Y" /></label>
-            <label>BDC<input type="text" id="ri-bdc" value="MODIFIED_FOLLOWING" /></label>
-            <button id="add-rate-index" class="btn-secondary" type="button">Add</button>
-          </div>
-        </details>
       </div>
 
       <!-- Calendars -->
       <div class="card full" id="data-calendars-card" hidden>
         <div class="card-head">
           <h2>Calendars</h2>
-          <div class="head-right">
-            <button id="export-calendar" class="btn-secondary" type="button">Export JSON</button>
-          </div>
+          <button class="help" type="button" data-help="datacals" aria-label="About calendars" aria-expanded="false">?</button>
         </div>
         <div class="table-wrap">
           <table id="calendars-table">
@@ -392,25 +377,17 @@
             <tbody></tbody>
           </table>
         </div>
-        <details class="new-issuer" style="margin-top:10px;padding-top:8px;">
-          <summary>Add calendar</summary>
-          <div class="data-form">
-            <label>Code<input type="text" id="cal-code" placeholder="EUR_HOLIDAY" /></label>
-            <label>Description<input type="text" id="cal-desc" placeholder="EUR trading holidays" /></label>
-            <label>Currency<input type="text" id="cal-currency" placeholder="EUR" /></label>
-            <label class="checkbox-label"><input type="checkbox" id="cal-cds-def" /> CDS default</label>
-            <label class="checkbox-label"><input type="checkbox" id="cal-ois-def" /> OIS default</label>
-            <button id="add-calendar" class="btn-secondary" type="button">Add</button>
+        <div id="holiday-editor" class="sub-card" hidden>
+          <div class="card-head">
+            <h3 id="holiday-editor-title">Holidays</h3>
+            <button id="holiday-close" class="bond-del" type="button" title="Close">&times;</button>
           </div>
-        </details>
-        <div id="holiday-editor" hidden>
-          <div class="group-title" id="holiday-editor-title">Holidays</div>
-          <div class="inline" style="margin-top:8px;">
+          <div class="inline" style="margin-bottom:8px;">
             <input type="date" id="holiday-date" />
             <button id="add-holiday" class="btn-secondary" type="button">Add date</button>
           </div>
-          <div id="holiday-list" class="bond-list" style="margin-top:10px;"></div>
-          <details class="new-issuer" style="margin-top:10px;padding-top:8px;">
+          <div id="holiday-list" class="bond-list"></div>
+          <details style="margin-top:8px;">
             <summary>Import dates (JSON)</summary>
             <textarea id="import-dates" rows="6" spellcheck="false" placeholder='["2026-01-01","2026-01-02",...]'></textarea>
             <button id="import-dates-btn" class="btn-secondary" type="button" style="margin-top:6px;">Import</button>
@@ -440,6 +417,27 @@
           <button id="ri-save" class="btn-primary" type="button" style="margin-top:8px;">Save</button>
         </div>
         <div id="ri-modal-status" class="status"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Calendar add modal -->
+  <div id="cal-modal" class="modal-overlay" hidden>
+    <div class="modal" role="dialog" aria-modal="true" style="max-width:520px;">
+      <div class="modal-head">
+        <h2>Add calendar</h2>
+        <button id="cal-close" class="modal-close" type="button" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="data-form">
+          <label>Code<input type="text" id="cal-code" placeholder="EUR_HOLIDAY" /></label>
+          <label>Description<input type="text" id="cal-desc" placeholder="EUR trading holidays" /></label>
+          <label>Currency<input type="text" id="cal-currency" placeholder="EUR" /></label>
+          <label class="checkbox-label"><input type="checkbox" id="cal-cds-def" /> CDS default</label>
+          <label class="checkbox-label"><input type="checkbox" id="cal-ois-def" /> OIS default</label>
+          <button id="cal-save" class="btn-primary" type="button" style="margin-top:8px;">Add calendar</button>
+        </div>
+        <div id="cal-modal-status" class="status"></div>
       </div>
     </div>
   </div>

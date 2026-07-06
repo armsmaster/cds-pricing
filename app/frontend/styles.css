@@ -517,6 +517,23 @@ tr.cds-detail .leg-summary b { color: var(--text); }
 #rates-table tbody tr { cursor: pointer; }
 .icon-col.toggle-flag { cursor: pointer; }
 
+.sub-card {
+  background: var(--panel-2);
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-top: 10px;
+}
+.sub-card .card-head { margin-bottom: 8px; }
+.sub-card h3 { font-size: 13px; margin: 0; color: var(--accent); }
+
+.data-empty {
+  text-align: center;
+  color: var(--muted);
+  padding: 18px;
+  font-size: 13px;
+}
+
 @media (max-width: 900px) {
   main { grid-template-columns: 1fr; }
   .controls { position: static; }
