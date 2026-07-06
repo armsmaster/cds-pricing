@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 from collections.abc import Awaitable, Callable, Iterator
 from datetime import date
@@ -581,6 +582,57 @@ def delete_holiday(
 ) -> dict[str, str]:
     repo.delete_holiday(session, holiday_id)
     return {"status": "deleted"}
+
+
+@app.patch("/api/data/calendars/{calendar_id}")
+def patch_calendar(
+    calendar_id: int,
+    request: dict[str, Any],
+    session: Session = Depends(get_session),
+) -> dict[str, Any]:
+    cal = repo.get_calendar(session, calendar_id)
+    if cal is None:
+        raise HTTPException(status_code=404, detail="Unknown calendar")
+    if "code" in request:
+        cal.code = request["code"]
+    if "description" in request:
+        cal.description = request["description"]
+    if "currency" in request:
+        cal.currency = request["currency"].upper()
+    if "is_default_for_cds" in request:
+        cal.is_default_for_cds = bool(request["is_default_for_cds"])
+    if "is_default_for_ois" in request:
+        cal.is_default_for_ois = bool(request["is_default_for_ois"])
+    session.commit()
+    session.refresh(cal)
+    return data_service.calendar_dict(cal)
+
+
+@app.get("/api/data/rate-indices/export")
+def export_rate_indices(session: Session = Depends(get_session)) -> Response:
+    mapping = repo.build_rate_index_mapping(session)
+    return Response(
+        content=json.dumps(mapping, indent=2),
+        media_type="application/json",
+        headers={"Content-Disposition": "attachment; filename=rate_indices.json"},
+    )
+
+
+@app.get("/api/data/calendars/{calendar_id}/export")
+def export_calendar(
+    calendar_id: int, session: Session = Depends(get_session)
+) -> Response:
+    cal = repo.get_calendar(session, calendar_id)
+    if cal is None:
+        raise HTTPException(status_code=404, detail="Unknown calendar")
+    dates = sorted(h.date.isoformat() for h in cal.dates)
+    payload = {cal.currency: dates}
+    name = f"calendar_{cal.code}.json"
+    return Response(
+        content=json.dumps(payload, indent=2),
+        media_type="application/json",
+        headers={"Content-Disposition": f'attachment; filename="{name}"'},
+    )
 
 
 @app.get("/")
