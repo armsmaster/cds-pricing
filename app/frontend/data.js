@@ -12,6 +12,7 @@ function dataStatus(message, kind) {
 
 function updateAddButton() {
   el("data-add").textContent = dataState.mode === "rates" ? "Add rate index" : "Add calendar";
+  el("data-export").textContent = "\u2193 " + (dataState.mode === "rates" ? "Export rate indices" : "Export calendar");
 }
 
 function renderDataSummary(rateCount, calCount) {
@@ -192,7 +193,7 @@ async function loadCalendars() {
           (c.is_default_for_cds ? "\u2713" : "") + "</td>" +
           '<td class="icon-col toggle-flag" data-field="is_default_for_ois" data-id="' + c.id + '">' +
           (c.is_default_for_ois ? "\u2713" : "") + "</td>" +
-          "<td>" + c.date_count + "</td>" +
+          "<td><span class=\"pill\">" + c.date_count + "</span></td>" +
           '<td><button class="bond-del" data-id="' + c.id + '" type="button" title="Delete">&times;</button></td></tr>'
         );
       }

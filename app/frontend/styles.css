@@ -523,9 +523,18 @@ tr.cds-detail .leg-summary b { color: var(--text); }
   border-radius: 8px;
   padding: 10px 14px;
   margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
-.sub-card .card-head { margin-bottom: 8px; }
+.sub-card .card-head { margin-bottom: 0; }
 .sub-card h3 { font-size: 13px; margin: 0; color: var(--accent); }
+
+#rates-table tbody tr { cursor: pointer; }
+.cal-link { font-family: "Cascadia Code", "Consolas", monospace; font-size: 12px; color: var(--accent); text-decoration: none; }
+.cal-link:hover { text-decoration: underline; opacity: 0.85; }
+.icon-col.toggle-flag { cursor: pointer; border-radius: 4px; }
+.icon-col.toggle-flag:hover { background: rgba(56, 189, 248, 0.12); }
 
 .data-empty {
   text-align: center;
