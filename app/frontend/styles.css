@@ -514,6 +514,8 @@ tr.cds-detail .leg-summary b { color: var(--text); }
 .data-form button { grid-column: 1 / -1; justify-self: start; }
 
 #calendars-table td.icon-col { text-align: center; width: 50px; }
+#rates-table tbody tr { cursor: pointer; }
+.icon-col.toggle-flag { cursor: pointer; }
 
 @media (max-width: 900px) {
   main { grid-template-columns: 1fr; }

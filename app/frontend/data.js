@@ -139,7 +139,7 @@ async function loadCalendars() {
         const sel = c.id === dataState.selectedCalendarId ? " expanded" : "";
         return (
           '<tr class="' + sel + '">' +
-          '<td><a href="#" class="cal-link" data-id="' + c.id + '">' +
+          '<td><a href="#" class="cal-link" data-id="' + c.id + '" data-code="' + escapeHtml(c.code) + '">' +
           escapeHtml(c.code) + "</a></td>" +
           "<td>" + escapeHtml(c.description) + "</td>" +
           "<td>" + escapeHtml(c.currency) + "</td>" +
@@ -156,7 +156,8 @@ async function loadCalendars() {
   tbody.querySelectorAll(".cal-link").forEach((a) =>
     a.addEventListener("click", (e) => {
       e.preventDefault();
-      selectCalendar(parseInt(a.dataset.id));
+      const id = parseInt(a.dataset.id);
+      selectCalendar(dataState.selectedCalendarId === id ? null : id, a.dataset.code);
     })
   );
   tbody.querySelectorAll(".toggle-flag").forEach((td) =>
@@ -215,11 +216,11 @@ async function addCalendar() {
 
 // --- holiday editor ---------------------------------------------------------
 
-async function selectCalendar(id) {
+async function selectCalendar(id, code) {
   dataState.selectedCalendarId = id;
   el("holiday-editor").hidden = !id;
   if (!id) { el("holiday-list").innerHTML = ""; return; }
-  el("holiday-editor-title").textContent = "Holidays — " + id;
+  el("holiday-editor-title").textContent = "Holidays — " + (code || id);
   await loadHolidays();
 }
 
@@ -306,6 +307,8 @@ function exportRateIndices() {
 function exportCalendar() {
   if (dataState.selectedCalendarId) {
     window.location.href = "/api/data/calendars/" + dataState.selectedCalendarId + "/export";
+  } else {
+    dataStatus("Select a calendar first", "error");
   }
 }
 
