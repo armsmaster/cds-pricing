@@ -1,5 +1,3 @@
-# syntax=docker/dockerfile:1
-
 # Base image and package index are overridable so the image can be built either
 # from public registries (defaults) or through an internal mirror such as Nexus.
 #   BASE_IMAGE     e.g. nexus.example.com:8082/python:3.12-slim-bookworm
