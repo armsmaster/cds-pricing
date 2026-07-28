@@ -36,6 +36,16 @@
         <input type="number" id="max-adj" value="15" min="0" step="0.5" />
       </label>
 
+      <label>
+        <span class="label-row">Smoothing (%)
+          <button class="help" type="button" data-help="smoothing" aria-label="About smoothing" aria-expanded="false">?</button>
+        </span>
+        <input type="number" id="smoothing" value="0" min="0" max="100" step="1" />
+      </label>
+      <p class="hint">
+        0% = auto (L-curve knee) · 100% = flattest forward the cap allows.
+      </p>
+
       <label>OIS quotes (JSON)
         <textarea id="quotes" spellcheck="false" rows="15"></textarea>
       </label>

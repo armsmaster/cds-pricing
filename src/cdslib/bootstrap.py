@@ -262,6 +262,7 @@ def bootstrap(
     trade_date: date | None = None,
     generator: OISGenerator | None = None,
     max_avg_adjustment_bps: float = _DEFAULT_MAX_AVG_ADJ_BPS,
+    smoothing_pct: float = 0.0,
 ) -> BootstrapResult:
     """Bootstrap a monthly zero curve from bid/ask OIS quotes.
 
@@ -272,8 +273,10 @@ def bootstrap(
     trustworthy quotes. Smoothing is increased to the largest level whose average
     absolute adjustment (model rate minus mid) stays within ``max_avg_adjustment_bps``.
 
-    Returns a :class:`BootstrapResult` whose ``points`` are (tenor in calendar
-    days, continuously-compounded zero rate) pairs on a one-month grid.
+    When ``smoothing_pct`` is 0 (the default), the smoothing weight is chosen at
+    the L-curve knee — the least adjustment that removes genuine kinks. Positive
+    values interpolate in log space toward the cap (the smoothest curve the cap
+    allows): 100 = maximum smoothness, 50 = halfway. The hard cap always applies.
     """
     if not quotes:
         raise ValueError("At least one quote is required")
@@ -323,7 +326,15 @@ def bootstrap(
     knee = _lcurve_corner(adjustments, roughness)
     within_cap = np.nonzero(adjustments <= max_avg_adjustment_bps)[0]
     cap_index = int(within_cap[-1]) if within_cap.size else 0
-    chosen = min(knee, cap_index)
+
+    if smoothing_pct <= 0:
+        chosen = min(knee, cap_index)
+    else:
+        log_knee = math.log(max(lambdas[knee], 1e-14))
+        log_cap = math.log(max(lambdas[min(cap_index, len(lambdas) - 1)], 1e-14))
+        target = log_knee + (smoothing_pct / 100.0) * (log_cap - log_knee)
+        chosen = int(np.searchsorted(np.log(lambdas), target))
+        chosen = min(max(chosen, knee), cap_index)
     best_z = solutions[chosen]
     best_lambda = float(lambdas[chosen])
 

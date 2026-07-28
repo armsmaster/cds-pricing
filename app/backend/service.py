@@ -43,6 +43,7 @@ def compute(
     items: list[QuoteIn],
     trade_date: date | None,
     max_adjustment_bps: float,
+    smoothing_pct: float = 0.0,
     generator: OISGenerator | None = None,
 ) -> BootstrapResult:
     """Run the OIS bootstrap and return the raw cdslib result."""
@@ -53,6 +54,7 @@ def compute(
         trade,
         generator=gen,
         max_avg_adjustment_bps=max_adjustment_bps,
+        smoothing_pct=smoothing_pct,
     )
 
 
@@ -114,10 +116,11 @@ def run_bootstrap(
     items: list[QuoteIn],
     trade_date: date | None,
     max_adjustment_bps: float,
+    smoothing_pct: float = 0.0,
     generator: OISGenerator | None = None,
 ) -> dict[str, Any]:
     """Bootstrap the curve and package everything the UI needs."""
-    result = compute(items, trade_date, max_adjustment_bps, generator)
+    result = compute(items, trade_date, max_adjustment_bps, smoothing_pct, generator)
     trade = result.trade_date
     quotes = _to_quotes(items)
     spot = result.spot_date

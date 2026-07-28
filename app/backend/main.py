@@ -78,7 +78,11 @@ def bootstrap_endpoint(
     try:
         gen = service._get_generator(session)
         return service.run_bootstrap(
-            request.quotes, request.trade_date, request.max_adjustment_bps, gen
+            request.quotes,
+            request.trade_date,
+            request.max_adjustment_bps,
+            request.smoothing_pct,
+            gen,
         )
     except (KeyError, ValueError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -90,7 +94,7 @@ def save_rate_curve(
 ) -> dict[str, Any]:
     try:
         result = service.compute(
-            request.quotes, request.trade_date, request.max_adjustment_bps
+            request.quotes, request.trade_date, request.max_adjustment_bps, request.smoothing_pct
         )
     except (KeyError, ValueError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

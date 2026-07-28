@@ -43,6 +43,10 @@ const PLOT_CONFIG = {
 const HELP = {
   maxadj: "Upper bound on the average absolute adjustment applied to the mids. " +
     "Lower it to track mids closely; raise it to allow a smoother forward curve.",
+  smoothing: "Controls how aggressively the forward curve is smoothed. " +
+    "0% = automatic (L-curve knee, minimal adjustment). 100% = flattest forward " +
+    "the adjustment cap allows. Higher values reduce humps at the cost of larger " +
+    "adjustments to the mids.",
   par: "Quoted bid/ask/mid par rates; the shaded band is the spread. After Calculate, " +
     "the adjusted mid shows where the fitted curve reprices each quote.",
   curve: "Fitted zero-coupon rates on a monthly grid. Toggle annual vs continuous " +
@@ -182,7 +186,7 @@ async function calculate() {
   if (el("calculate").disabled) return;
   let body;
   try {
-    body = requestBody({ max_adjustment_bps: parseFloat(el("max-adj").value) || 15 });
+    body = requestBody({ max_adjustment_bps: parseFloat(el("max-adj").value) || 15, smoothing_pct: parseFloat(el("smoothing").value) || 0 });
     setQuotesValidity(true);
   } catch (err) {
     setQuotesValidity(false);
@@ -229,6 +233,7 @@ function renderSummary() {
     chip("Rate", b.rate_index),
     chip("Spot", b.spot_date),
     chip("Avg adjustment", avg.toFixed(2) + " bps", cls),
+    chip("Smoothing", el("smoothing").value + "%"),
     chip("Max adjustment", cap.toFixed(1) + " bps"),
     chip("Smoothing \u03bb", Number(b.smoothing_lambda).toPrecision(3)),
     chip("Nodes", b.curve.length + " \u00b7 monthly"),

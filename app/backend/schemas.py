@@ -23,6 +23,7 @@ class QuotesRequest(BaseModel):
 
 class BootstrapRequest(QuotesRequest):
     max_adjustment_bps: float = 15.0
+    smoothing_pct: float = 0.0
 
 
 class IssuerIn(BaseModel):
